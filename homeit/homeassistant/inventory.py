@@ -14,6 +14,15 @@ from homeit import config
 from homeit.homeassistant.client import HA
 
 BAD_STATES = {"setup_error", "setup_retry", "migration_error", "failed_unload", "not_loaded"}
+IDLE_UNAVAILABLE = ("media_player.",)
+
+
+def _shown_state(e: dict) -> str:
+    if e.get("source") == "ignore":
+        return "ignored"
+    if e.get("disabled_by"):
+        return "disabled"
+    return e.get("state") or "?"
 
 
 def collect() -> dict:
@@ -50,23 +59,25 @@ def summarize(s: dict) -> str:
         ent_tot[k] += 1
         if not e.get("disabled_by"):
             ent_on[k] += 1
-            if state_of.get(e["entity_id"]) == "unavailable":
+            # media players (Plex/TV clients) are routinely unavailable when switched off: not a fault
+            if state_of.get(e["entity_id"]) == "unavailable" and not e["entity_id"].startswith(IDLE_UNAVAILABLE):
                 ent_unavail[k] += 1
 
     reauth = [f for f in s["flows"] if (f.get("context") or {}).get("source") in ("reauth", "reconfigure")]
     discovered = [f for f in s["flows"] if (f.get("context") or {}).get("source") not in ("reauth", "reconfigure")]
     issues = [i for i in s["issues"] if not i.get("dismissed_version") and not i.get("ignored")]
-    bad = [e for e in s["entries"] if e.get("state") in BAD_STATES and not e.get("disabled_by")]
+    bad = [e for e in s["entries"] if _shown_state(e) in BAD_STATES]
+    flaky = [e for e in s["entries"] if ent_unavail[e["entry_id"]] and e not in bad]
 
     cfg = s["config"]
     L = [f"# Home Assistant inventory - {cfg.get('location_name')}",
          f"_Collected {s['collected_at']} - HA {s['ha_version']} - as user `{s['user'].get('name')}`"
          f" (admin={s['user'].get('is_admin')})_", "",
          f"**{len(s['entries'])} integrations, {len(s['devices'])} devices, {len(s['entities'])} entities "
-         f"({sum(ent_on.values())} enabled, {sum(ent_unavail.values())} unavailable), "
+         f"({sum(ent_on.values())} enabled, {sum(ent_unavail.values())} unavailable excluding idle media players), "
          f"{len(s['dashboards'])} extra dashboards.**", "",
          "## Needs attention", ""]
-    if not (reauth or bad or issues or discovered):
+    if not (reauth or bad or issues or discovered or flaky):
         L.append("Nothing. 🎉")
     for f in reauth:
         e = entries.get((f.get("context") or {}).get("entry_id"), {})
@@ -78,14 +89,20 @@ def summarize(s: dict) -> str:
         L.append(f"- 🛠 Repair `{i['domain']}`: {i.get('translation_key') or i['issue_id']} (severity {i.get('severity')})")
     for f in discovered:
         L.append(f"- ➕ Discovered, not set up: `{f['handler']}` ({(f.get('context') or {}).get('source')})")
+    for e in flaky:
+        ids = sorted(x["entity_id"] for x in s["entities"] if x.get("config_entry_id") == e["entry_id"]
+                     and not x.get("disabled_by") and state_of.get(x["entity_id"]) == "unavailable"
+                     and not x["entity_id"].startswith(IDLE_UNAVAILABLE))
+        L.append(f"- 🔌 `{e['domain']}` - {e['title'][:40]}: {len(ids)} unavailable: "
+                 + ", ".join(f"`{i}`" for i in ids[:6]) + (" ..." if len(ids) > 6 else ""))
 
     L += ["", "## Integrations", "",
           "| Integration | Title | State | Devices | Entities on/total | Unavailable | Source |",
           "|---|---|---|---|---|---|---|"]
     for e in sorted(s["entries"], key=lambda e: (e["domain"], e["title"])):
         k = e["entry_id"]
-        st = "disabled" if e.get("disabled_by") else e.get("state")
-        flag = "" if st in ("loaded", "disabled") else " ⚠️"
+        st = _shown_state(e)
+        flag = "" if st in ("loaded", "disabled", "ignored") else " ⚠️"
         L.append(f"| {e['domain']} | {e['title'][:40]} | {st}{flag} | {len(devs_by.get(k, []))} | "
                  f"{ent_on[k]}/{ent_tot[k]} | {ent_unavail[k] or ''} | {e.get('source')} |")
 
