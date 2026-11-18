@@ -10,3 +10,8 @@ cert_sha256 = ""                # pin: `python -m homeit synology pin-cert`
 keyring_service = "home-it/synology"
 docker_bin = "/usr/local/bin/docker"
 update_exclude = []             # container names the weekly image update skips
+
+[homeassistant]
+url = "http://my-nas:8123"      # LAN URL of the Home Assistant container
+keyring_service = "home-it/homeassistant"
+token_name = "<svc-user>"       # long-lived access token of the dedicated HA user, stored in the keyring
