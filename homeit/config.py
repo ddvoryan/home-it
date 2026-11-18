@@ -49,6 +49,14 @@ class SynologyConfig:
         object.__setattr__(self, "update_exclude", tuple(self.update_exclude))
 
 
+@dataclass(frozen=True)
+class HomeAssistantConfig:
+    url: str                                  # e.g. http://my-nas:8123 (no trailing slash)
+    keyring_service: str = "home-it/homeassistant"
+    token_name: str = "homeit"                # keyring "username" the long-lived token is stored under
+    verify_tls: bool = True                   # only relevant for https URLs
+
+
 def load() -> dict:
     p = config_path()
     if not p.exists():
@@ -61,3 +69,10 @@ def load() -> dict:
 
 def synology() -> SynologyConfig:
     return SynologyConfig(**load()["synology"])
+
+
+def homeassistant() -> HomeAssistantConfig:
+    c = load().get("homeassistant")
+    if not c:
+        raise SystemExit(f"No [homeassistant] section in {config_path()}; see config.example.toml")
+    return HomeAssistantConfig(**c)

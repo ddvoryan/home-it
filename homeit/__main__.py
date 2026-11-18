@@ -80,6 +80,29 @@ def _redirect_if_windowless():
         print(f"\n=== {' '.join(sys.argv[1:])}")
 
 
+def _ha_set_token(_a):
+    cfg = config.homeassistant()
+    print("Paste the long-lived access token (input is hidden).")
+    secrets.set_interactive(cfg.keyring_service, cfg.token_name)
+
+
+def _ha_probe(_a):
+    from homeit.homeassistant.client import HA
+    try:
+        with HA() as ha:
+            u = ha.ws("auth/current_user")
+            n = len(ha.ws("config_entries/get"))
+            print(f"[ha] OK  HA {ha.version} as '{u.get('name')}' (admin={u.get('is_admin')}), {n} integrations")
+    except Exception as e:  # noqa: BLE001
+        print(f"[ha] FAIL  {e}")
+        sys.exit(1)
+
+
+def _ha_inventory(a):
+    from homeit.homeassistant import inventory
+    inventory.main(json_only=a.json, out=a.out)
+
+
 def _secret_set(a):
     secrets.set_interactive(a.service, a.username)
 
@@ -111,6 +134,14 @@ def main(argv=None):
     up.add_argument("--only", nargs="+", metavar="NAME", help="limit to these containers")
     up.add_argument("--force-rollback", action="store_true", help=argparse.SUPPRESS)
     up.set_defaults(fn=_syn_update_images)
+
+    ha = g.add_parser("ha", help="Home Assistant").add_subparsers(dest="cmd", required=True)
+    ha.add_parser("set-token", help="store the HA long-lived access token in the keyring").set_defaults(fn=_ha_set_token)
+    ha.add_parser("probe", help="test the HA API token and WebSocket").set_defaults(fn=_ha_probe)
+    inv = ha.add_parser("inventory", help="integrations, health, devices, re-auth needs")
+    inv.add_argument("--json", action="store_true", help="print the raw snapshot")
+    inv.add_argument("--out", help="also write the summary markdown to this path")
+    inv.set_defaults(fn=_ha_inventory)
 
     sec = g.add_parser("secret").add_subparsers(dest="cmd", required=True)
     s = sec.add_parser("set"); s.add_argument("service"); s.add_argument("username"); s.set_defaults(fn=_secret_set)
