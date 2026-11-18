@@ -43,6 +43,10 @@ class SynologyConfig:
     cert_sha256: str | None = None  # pinned DSM TLS cert fingerprint (hex)
     keyring_service: str = "home-it/synology"
     docker_bin: str = "/usr/local/bin/docker"
+    update_exclude: tuple[str, ...] = ()  # container names the weekly image update must skip
+
+    def __post_init__(self):
+        object.__setattr__(self, "update_exclude", tuple(self.update_exclude))
 
 
 def load() -> dict:

@@ -35,5 +35,7 @@ def run(alias: str, cmd: str, *, sudo_password: str | None = None,
         ["ssh", "-o", "BatchMode=yes", alias, remote],
         input=stdin, capture_output=True, text=True, timeout=timeout,
         encoding="utf-8", errors="replace",
+        # no console window flashing up when run from pythonw / Task Scheduler
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
     return Result(cmd, p.returncode, p.stdout, p.stderr.strip())

@@ -201,100 +201,113 @@ def _parse_dt(s: str | None) -> datetime | None:
     return None
 
 
-def findings(snap: dict, rows: list[dict]) -> list[tuple[str, str, str]]:
-    f: list[tuple[str, str, str]] = []
-    add = lambda sev, area, msg: f.append((sev, area, msg))  # noqa: E731
+def findings(snap: dict, rows: list[dict], prev_running: set[str] | None = None) -> list[dict]:
+    """Evaluate the snapshot. Each finding has a stable `key` (no changing numbers)
+    so the hourly check can tell new / escalated / resolved issues apart.
+    `prev_running`: containers running at the previous check (detects crashes)."""
+    f: list[dict] = []
+
+    def add(sev, area, msg, key, value=None):
+        f.append({"severity": sev, "area": area, "message": msg, "key": key, "value": value})
+
     now = datetime.now()
+    if snap.get("fatal"):
+        add("critical", "Connectivity", f"NAS check failed: {snap['fatal']}", "collect_failed")
+        return f
     sysinfo, status = snap.get("system") or {}, snap.get("system_status") or {}
     if status.get("is_system_crashed"):
-        add("critical", "System", "DSM reports the system partition as crashed")
+        add("critical", "System", "DSM reports the system partition as crashed", "sys_crashed")
     if sysinfo.get("temperature_warning") or sysinfo.get("sys_tempwarn"):
-        add("warning", "System", f"System temperature warning ({sysinfo.get('sys_temp')} C)")
+        add("warning", "System", f"System temperature warning ({sysinfo.get('sys_temp')} C)", "sys_temp")
 
     st = snap.get("storage") or {}
     for p in st.get("storagePools", []):
         if p.get("status") != "normal":
-            add("critical", "Storage", f"Storage pool {p['id']} status: {p.get('status')}")
+            add("critical", "Storage", f"Storage pool {p['id']} status: {p.get('status')}", f"pool:{p['id']}:{p.get('status')}")
     for v in st.get("volumes", []):
         u = _pct(v["size"]["used"], v["size"]["total"])
         if v.get("status") != "normal":
-            add("critical", "Storage", f"{v['vol_path']} status: {v.get('status')}")
+            add("critical", "Storage", f"{v['vol_path']} status: {v.get('status')}", f"vol_status:{v['vol_path']}")
         if u >= 90:
-            add("critical", "Storage", f"{v['vol_path']} is {u}% full")
+            add("critical", "Storage", f"{v['vol_path']} is {u}% full", f"vol_full:{v['vol_path']}", u)
         elif u >= 80:
-            add("warning", "Storage", f"{v['vol_path']} is {u}% full")
+            add("warning", "Storage", f"{v['vol_path']} is {u}% full", f"vol_full:{v['vol_path']}", u)
     sched = (st.get("env") or {}).get("data_scrubbing", {})
     last_scrub = max((p.get("last_done_time") or 0 for p in st.get("storagePools", [])), default=0)
     if sched.get("sche_status") == "paused":
-        add("warning", "Storage", "Scheduled data scrubbing is PAUSED")
+        add("warning", "Storage", "Scheduled data scrubbing is PAUSED", "scrub_paused")
     if last_scrub and now - datetime.fromtimestamp(last_scrub) > timedelta(days=180):
-        add("warning", "Storage", f"Last data scrub completed {datetime.fromtimestamp(last_scrub):%Y-%m-%d} (>180 days ago)")
+        add("warning", "Storage", f"Last data scrub completed {datetime.fromtimestamp(last_scrub):%Y-%m-%d} (>180 days ago)", "scrub_stale")
     if "_" in (snap.get("mdstat") or "") or "recovery" in (snap.get("mdstat") or ""):
-        add("critical", "Storage", "An md RAID array is degraded or rebuilding (see /proc/mdstat)")
+        add("critical", "Storage", "An md RAID array is degraded or rebuilding (see /proc/mdstat)", "md_degraded")
     for dk in st.get("disks", []):
         sm = (snap.get("smart") or {}).get(dk["id"], {})
         label = f"{dk.get('name')} ({dk['id']}, {dk.get('model')})"
         if dk.get("status") != "normal" or dk.get("smart_status") not in ("normal", None):
-            add("critical", "Disks", f"{label}: status={dk.get('status')} smart={dk.get('smart_status')}")
+            add("critical", "Disks", f"{label}: status={dk.get('status')} smart={dk.get('smart_status')}", f"disk_status:{dk['id']}")
         if sm.get("health") and sm["health"] != "PASSED":
-            add("critical", "Disks", f"{label}: SMART self-assessment {sm['health']}")
+            add("critical", "Disks", f"{label}: SMART self-assessment {sm['health']}", f"smart_health:{dk['id']}")
         for k in ("reallocated", "pending", "offline_uncorrect", "reported_uncorrect"):
             if sm.get(k):
-                add("warning", "Disks", f"{label}: SMART {k} = {sm[k]}")
+                add("warning", "Disks", f"{label}: SMART {k} = {sm[k]}", f"smart:{dk['id']}:{k}", sm[k])
         if (dk.get("temp") or 0) >= 50:
-            add("warning", "Disks", f"{label}: temperature {dk['temp']} C")
+            add("warning", "Disks", f"{label}: temperature {dk['temp']} C", f"disk_temp:{dk['id']}")
     for dev in (snap.get("usb") or {}).get("devices", []):
         for part in dev.get("partitions", []):
             u = _pct(part["used_size_mb"], part["total_size_mb"])
             if u >= 90:
-                add("warning", "USB", f"{dev.get('product')} ({part.get('share_name')}) is {u}% full")
+                add("warning", "USB", f"{dev.get('product')} ({part.get('share_name')}) is {u}% full", f"usb_full:{part.get('share_name')}", u)
 
     for b in snap.get("backups", []):
         last_ok = _parse_dt(b.get("last_success"))
         if b.get("last_result") not in ("done", None):
             since = f" since {last_ok:%Y-%m-%d}" if last_ok else ""
             add("critical", "Backup", f"Hyper Backup '{b['name']}' last run {b.get('last_result')}: "
-                                      f"{b.get('last_error') or 'no detail'} (no successful run{since})")
+                                      f"{b.get('last_error') or 'no detail'} (no successful run{since})", f"backup_failed:{b['name']}")
         elif last_ok and now - last_ok > timedelta(days=8):
-            add("warning", "Backup", f"Hyper Backup '{b['name']}' last success {last_ok:%Y-%m-%d}")
+            add("warning", "Backup", f"Hyper Backup '{b['name']}' last success {last_ok:%Y-%m-%d}", f"backup_stale:{b['name']}")
 
     upd = (snap.get("dsm_update") or {}).get("update", {})
     if upd.get("available"):
-        add("warning", "Updates", f"DSM update available: {upd.get('version') or upd}")
-    pk = [p for p in snap.get("packages", []) if p["update"]]
-    if pk:
-        add("warning", "Updates", "Package updates: " + ", ".join(f"{p['name']} {p['version']} -> {p['available']}" for p in pk))
+        ver = upd.get("version") or upd.get("version_details") or ""
+        add("warning", "Updates", f"DSM update available: {ver or upd}", f"dsm_update:{ver}")
+    for p in snap.get("packages", []):
+        if p["update"]:
+            add("warning", "Updates", f"Package update: {p['name']} {p['version']} -> {p['available']}", f"pkg_update:{p['id']}:{p['available']}")
     sa = snap.get("security_advisor") or {}
     if sa.get("sysStatus") not in ("safe", None):
         bad = [k for k, v in (sa.get("items") or {}).items() if v.get("failSeverity") != "safe"]
-        add("info", "Security", f"Security Advisor status '{sa.get('sysStatus')}' (categories: {', '.join(bad)})")
+        sev = "warning" if any((v.get("fail") or {}).get(x) for v in (sa.get("items") or {}).values() for x in ("danger", "risk")) else "info"
+        add(sev, "Security", f"Security Advisor status '{sa.get('sysStatus')}' (categories: {', '.join(bad)})", f"secadv:{','.join(sorted(bad))}")
     if (snap.get("firewall") or {}).get("enable_firewall") is False:
-        add("info", "Security", "DSM firewall is disabled")
+        add("info", "Security", "DSM firewall is disabled", "firewall_off")
 
     for r in rows:
         n = r["name"]
         if r["state"] == "running" and r["health"] == "unhealthy":
-            add("warning", "Containers", f"{n} is running but UNHEALTHY")
+            add("warning", "Containers", f"{n} is running but UNHEALTHY", f"ctr_unhealthy:{n}")
         if r["state"] == "restarting" or r["restart_count"] > 5:
-            add("warning", "Containers", f"{n} is restart-looping (restarts={r['restart_count']})")
+            add("warning", "Containers", f"{n} is restart-looping (restarts={r['restart_count']})", f"ctr_restarting:{n}")
         if r["state"] == "exited" and r["exit_code"] not in (0, None):
-            add("warning", "Containers", f"{n} exited with code {r['exit_code']}")
+            add("warning", "Containers", f"{n} exited with code {r['exit_code']}", f"ctr_exit:{n}")
+        elif prev_running and n in prev_running and r["state"] != "running":
+            add("warning", "Containers", f"{n} was running at the last check and is now '{r['state']}'", f"ctr_down:{n}")
         if r["state"] == "running" and r["restart_policy"] == "no":
-            add("info", "Containers", f"{n} has no restart policy (may not come back after reboot/crash)")
+            add("info", "Containers", f"{n} has no restart policy (may not come back after reboot/crash)", f"ctr_norestart:{n}")
         if r["docker_sock"] and r["state"] == "running":
-            add("info", "Containers", f"{n} mounts the Docker socket (root-equivalent access)")
+            add("info", "Containers", f"{n} mounts the Docker socket (root-equivalent access)", f"ctr_sock:{n}")
         if r["privileged"]:
-            add("info", "Containers", f"{n} runs privileged")
+            add("info", "Containers", f"{n} runs privileged", f"ctr_priv:{n}")
     never = [r["name"] for r in rows if r["state"] == "created"]
     if never:
-        add("info", "Containers", "Created but never started: " + ", ".join(never))
+        add("info", "Containers", "Created but never started: " + ", ".join(never), "ctr_never_started")
     ups = [r["name"] for r in rows if r["update_available"]]
     if ups:
-        add("info", "Containers", f"Image updates available for {len(ups)}: " + ", ".join(ups))
+        add("info", "Containers", f"Image updates available for {len(ups)}: " + ", ".join(ups), "img_updates")
     stopped_proj = [p["name"] for p in snap.get("cm_projects", []) if p.get("status") != "RUNNING"]
     if stopped_proj:
-        add("info", "Containers", "Container Manager projects not running: " + ", ".join(stopped_proj))
-    return sorted(f, key=lambda x: (SEV_ORDER[x[0]], x[1]))
+        add("info", "Containers", "Container Manager projects not running: " + ", ".join(stopped_proj), "proj_stopped")
+    return sorted(f, key=lambda x: (SEV_ORDER[x["severity"]], x["area"]))
 
 
 # --------------------------------------------------------------------------- report
@@ -307,10 +320,10 @@ def render(snap: dict, rows: list[dict], fnd: list) -> str:
          f"Collected {snap['collected_at']}  |  {s.get('firmware_ver')}  |  uptime {s.get('up_time')} (h:m:s)  |  "
          f"sys temp {s.get('sys_temp')} C  |  CPU {cpu.get('user_load', 0) + cpu.get('system_load', 0) + cpu.get('other_load', 0)}%  |  "
          f"RAM {mem.get('real_usage')}% (swap {mem.get('swap_usage')}%)", ""]
-    crit = sum(1 for x in fnd if x[0] == "critical"); warn = sum(1 for x in fnd if x[0] == "warning")
+    crit = sum(1 for x in fnd if x["severity"] == "critical"); warn = sum(1 for x in fnd if x["severity"] == "warning")
     L += [f"## Findings - {crit} critical, {warn} warning, {len(fnd) - crit - warn} info", ""]
     icon = {"critical": "🔴", "warning": "🟠", "info": "🔵"}
-    L += [f"- {icon[sev]} **{area}** - {msg}" for sev, area, msg in fnd] or ["- ✅ No issues found"]
+    L += [f"- {icon[x['severity']]} **{x['area']}** - {x['message']}" for x in fnd] or ["- ✅ No issues found"]
 
     L += ["", "## Storage", "", "| Pool / Volume | Type | Status | Used | Size |", "|---|---|---|---|---|"]
     for p in st.get("storagePools", []):
@@ -360,25 +373,37 @@ def render(snap: dict, rows: list[dict], fnd: list) -> str:
     return "\n".join(L) + "\n"
 
 
-def main(json_only: bool = False, out: str | None = None) -> None:
-    t0 = time.time()
-    snap = collect()
-    rows = containers(snap)
-    fnd = findings(snap, rows)
-    snap["containers"] = rows
-    snap["findings"] = [{"severity": a, "area": b, "message": c} for a, b, c in fnd]
-    clean = redact(snap)
+def out_dir() -> Path:
     d = config.data_dir() / "synology"
     d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def run(prev_running: set[str] | None = None) -> tuple[dict, list[dict], list[dict], str]:
+    """Collect + analyse + persist. Never raises for NAS-side failures: a failed
+    collection becomes a critical 'collect_failed' finding instead."""
+    try:
+        snap = collect()
+    except Exception as e:  # noqa: BLE001
+        snap = {"collected_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+                "host": "?", "errors": [], "fatal": f"{type(e).__name__}: {e}", "docker": {}}
+    rows = containers(snap) if not snap.get("fatal") else []
+    fnd = findings(snap, rows, prev_running)
+    snap["containers"], snap["findings"] = rows, fnd
+    clean = redact(snap)
+    d = out_dir()
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     (d / f"snapshot-{stamp}.json").write_text(json.dumps(clean, indent=1, default=str), encoding="utf-8")
-    report = render(clean, rows, fnd)
+    report = render(clean, rows, fnd) if not snap.get("fatal") else f"# Synology report\n\nCollection FAILED: {snap['fatal']}\n"
     (d / f"report-{stamp}.md").write_text(report, encoding="utf-8")
     (d / "latest.md").write_text(report, encoding="utf-8")
+    return clean, rows, fnd, report
+
+
+def main(json_only: bool = False, out: str | None = None) -> None:
+    t0 = time.time()
+    clean, _rows, _fnd, report = run()
     if out:
         Path(out).write_text(report, encoding="utf-8")
-    if json_only:
-        print(json.dumps(clean, indent=1, default=str))
-    else:
-        print(report)
-        print(f"(saved {d / f'snapshot-{stamp}.json'} in {time.time() - t0:.0f}s)")
+    print(json.dumps(clean, indent=1, default=str) if json_only else report)
+    print(f"(done in {time.time() - t0:.0f}s; saved under {out_dir()})")

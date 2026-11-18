@@ -67,6 +67,26 @@ Then restrict the key to the LAN by prefixing its line in `authorized_keys` with
 - The Hyper Backup task API returns cloud-target **refresh tokens**. The inventory deliberately
   doesn't call `SYNO.Backup.Task get`, and redacts token-like keys anyway.
 
+## Recurring jobs
+
+Register the Task Scheduler jobs (run as your user, *only when logged on*, because Credential Manager
+secrets are only readable inside your session):
+
+```powershell
+$repo = '<path-to-home-it>'; $pyw = "$repo\.venv\Scripts\pythonw.exe"
+$prin = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive
+$set  = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskPath '\home-it\' -TaskName 'NAS hourly check' -Principal $prin -Settings $set `
+  -Action (New-ScheduledTaskAction -Execute $pyw -Argument '-m homeit synology check' -WorkingDirectory $repo) `
+  -Trigger (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650))
+Register-ScheduledTask -TaskPath '\home-it\' -TaskName 'NAS weekly image update' -Principal $prin -Settings $set `
+  -Action (New-ScheduledTaskAction -Execute $pyw -Argument '-m homeit synology update-images' -WorkingDirectory $repo) `
+  -Trigger (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 4:00)
+```
+
+`pythonw` has no console, so output goes to `~/.home-it/logs/homeit.log`, and `ssh` is started with
+`CREATE_NO_WINDOW` so no window flashes up every hour.
+
 ## Useful DSM Web API calls (DSM 7.4)
 
 | Purpose | API · method · version |

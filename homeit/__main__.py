@@ -53,6 +53,33 @@ def _syn_inventory(a):
     inventory.main(json_only=a.json, out=a.out)
 
 
+def _syn_check(_a):
+    from homeit.synology import monitor
+    monitor.check()
+
+
+def _syn_alerts(a):
+    from homeit.synology import monitor
+    monitor.alerts(ack=a.ack, as_json=a.json, history_hours=a.history)
+
+
+def _syn_update_images(a):
+    from homeit.synology import updates
+    updates.main(dry_run=a.dry_run, only=a.only, force_rollback=a.force_rollback)
+
+
+def _redirect_if_windowless():
+    """Under pythonw (Task Scheduler) there is no console: log to ~/.home-it/logs/homeit.log."""
+    if sys.stdout is None or sys.stderr is None:
+        d = config.config_dir() / "logs"
+        d.mkdir(parents=True, exist_ok=True)
+        log = d / "homeit.log"
+        if log.exists() and log.stat().st_size > 5_000_000:
+            log.replace(d / "homeit.log.1")
+        sys.stdout = sys.stderr = open(log, "a", encoding="utf-8", buffering=1)
+        print(f"\n=== {' '.join(sys.argv[1:])}")
+
+
 def _secret_set(a):
     secrets.set_interactive(a.service, a.username)
 
@@ -73,13 +100,30 @@ def main(argv=None):
     inv.add_argument("--json", action="store_true", help="print raw JSON instead of the summary")
     inv.add_argument("--out", help="also write the summary markdown to this path")
     inv.set_defaults(fn=_syn_inventory)
+    syn.add_parser("check", help="hourly: inventory + queue alerts for new/escalated/resolved findings").set_defaults(fn=_syn_check)
+    al = syn.add_parser("alerts", help="show (or --ack) queued alerts")
+    al.add_argument("--ack", action="store_true", help="mark all pending alerts as delivered")
+    al.add_argument("--json", action="store_true")
+    al.add_argument("--history", type=int, metavar="HOURS", help="show delivered + pending alerts from the last N hours")
+    al.set_defaults(fn=_syn_alerts)
+    up = syn.add_parser("update-images", help="weekly: update container images with health check + rollback")
+    up.add_argument("--dry-run", action="store_true", help="only list targets")
+    up.add_argument("--only", nargs="+", metavar="NAME", help="limit to these containers")
+    up.add_argument("--force-rollback", action="store_true", help=argparse.SUPPRESS)
+    up.set_defaults(fn=_syn_update_images)
 
     sec = g.add_parser("secret").add_subparsers(dest="cmd", required=True)
     s = sec.add_parser("set"); s.add_argument("service"); s.add_argument("username"); s.set_defaults(fn=_secret_set)
     s = sec.add_parser("check"); s.add_argument("service"); s.add_argument("username"); s.set_defaults(fn=_secret_check)
 
+    _redirect_if_windowless()
     a = p.parse_args(argv)
-    a.fn(a)
+    try:
+        a.fn(a)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 if __name__ == "__main__":
