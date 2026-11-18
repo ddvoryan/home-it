@@ -1,0 +1,12 @@
+# Copy to ~/.home-it/config.toml (NOT into the repo) and fill in.
+# The repo is public: keep real hostnames, users and fingerprints out of git.
+
+[synology]
+host = "my-nas"                 # DNS name or IP of the DSM box
+username = "svc-account"        # dedicated DSM admin used by the tooling
+ssh_alias = "nas"               # Host alias in ~/.ssh/config
+dsm_port = 5001                 # HTTPS DSM port
+cert_sha256 = ""                # pin: `python -m homeit synology pin-cert`
+keyring_service = "home-it/synology"
+docker_bin = "/usr/local/bin/docker"
+update_exclude = []             # container names the weekly image update skips
