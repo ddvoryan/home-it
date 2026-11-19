@@ -55,6 +55,7 @@ class HomeAssistantConfig:
     keyring_service: str = "home-it/homeassistant"
     token_name: str = "homeit"                # keyring "username" the long-lived token is stored under
     verify_tls: bool = True                   # only relevant for https URLs
+    host_config_dir: str = ""                 # HA's /config folder as seen on the NAS (for `ha deploy-panel`)
 
 
 def load() -> dict:
