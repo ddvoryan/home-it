@@ -219,8 +219,11 @@ button{font:inherit;color:inherit}
 .armed{border-color:var(--alert)!important;box-shadow:0 0 0 1px var(--alert)!important}
 .armed .sv{color:var(--alert)!important}
 .rooms{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:8px;flex:1;min-height:0}
-.room{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;gap:4px;padding:10px 12px;
+.room{all:unset;box-sizing:border-box;cursor:pointer;display:block;container:room/size;overflow:hidden;
   border-radius:20px;background:var(--tile);border:1px solid var(--tile-brd);min-width:0;min-height:0;transition:background .3s,box-shadow .3s}
+.room .ri{box-sizing:border-box;height:100%;display:flex;flex-direction:column;justify-content:space-between;gap:4px;padding:10px 12px}
+.room .rb{display:block;min-width:0}
+.room .rb>span{display:block}
 .room .rt{display:flex;justify-content:space-between;align-items:center;color:var(--d)}
 .room .rn{font-size:14px;font-weight:700;color:var(--t)}
 .room .rv{font-family:var(--f-num);font-weight:500;font-size:17px;letter-spacing:-.04em;line-height:1.1}
@@ -330,13 +333,28 @@ button{font:inherit;color:inherit}
   .tile .bub .ic{width:19px;height:19px}
   .tile .nm{font-size:13.5px}
   .tile .sv{font-size:12px}
-  .room{padding:9px 10px}
+  .room .ri{padding:9px 10px}
   .room .rn{font-size:13px}
   .room .rv{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .room .ic{width:19px;height:19px}
   .hero{font-size:38px}
   .wnow .hero{font-size:40px}
   .clock{font-size:36px}
+}
+/* Room tiles share whatever height the screen leaves (the Android app's system bars take ~90px), so each
+   tile tightens itself: value and status on one line when short, a single name + value line when very short. */
+@container room (max-height: 74px){
+  .room .ri{padding:6px 10px;gap:2px}
+  .room .rt .ic{width:16px;height:16px}
+  .room .rb{display:flex;align-items:baseline;gap:6px}
+  .room .rv{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .room .rs{flex:1 1 0;min-width:0}
+}
+@container room (max-height: 48px){
+  .room .ri{flex-direction:row;align-items:center;justify-content:flex-start;gap:8px}
+  .room .rt{flex:1;min-width:0}
+  .room .rt .ic,.room .rb .rs{display:none}
+  .room .rn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 @container scr (max-width: 700px){
   .screen{overflow-y:auto;overscroll-behavior:contain}
@@ -449,7 +467,14 @@ class HomePanel extends HTMLElement {
   _schedule(force) {
     if (force) this._force = true;
     if (this._raf) return;
-    this._raf = requestAnimationFrame(() => { this._raf = 0; this._render(); });
+    // requestAnimationFrame can stall in a hidden or throttled WebView, so a timer backs it up.
+    const run = () => {
+      if (!this._raf) return;
+      cancelAnimationFrame(this._raf); clearTimeout(this._rafT); this._raf = 0;
+      this._render();
+    };
+    this._raf = requestAnimationFrame(run);
+    this._rafT = setTimeout(run, 300);
   }
 
   // ---------- derived state ----------
@@ -741,7 +766,7 @@ class HomePanel extends HTMLElement {
       <div class="rooms">${rooms.map((r, i) => {
         const x = this.roomInfo(r);
         return `<button class="room ${x.c ? 'on' : ''}" style="--c:var(--${x.c || 'd'})" data-open="room:${i}">
-          <span class="rt"><span class="rn">${esc(r.name)}</span>${ic(r.icon)}</span><span><div class="rv">${esc(x.v)}</div><div class="rs">${esc(x.s)}</div></span></button>`;
+          <span class="ri"><span class="rt"><span class="rn">${esc(r.name)}</span>${ic(r.icon)}</span><span class="rb"><span class="rv">${esc(x.v)}</span><span class="rs">${esc(x.s)}</span></span></span></button>`;
       }).join('')}</div></section>`;
   }
   fcLabel(f) {

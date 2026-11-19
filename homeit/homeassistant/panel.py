@@ -136,8 +136,12 @@ def deploy(restart: bool = False, dry_run: bool = False) -> None:
     js = (PANEL_SRC / "home-panel.js").read_bytes()
     version = hashlib.sha256(js).hexdigest()[:12]
     loader = (PANEL_SRC / "loader.js").read_bytes()
+    # HA serves /local/ with a 31-day cache. The loader URL carries the loader's own hash, so a device that
+    # cached an older loader gets a new URL. Changing it is a YAML change, so it needs one HA restart.
+    loader_version = hashlib.sha256(loader).hexdigest()[:8]
 
-    entry = {"name": "home-panel", "module_url": "/local/home-panel/loader.js", **site.get("panel", {}), "config": panel_cfg}
+    entry = {"name": "home-panel", "module_url": f"/local/home-panel/loader.js?v={loader_version}",
+             **site.get("panel", {}), "config": panel_cfg}
     yaml_text = ("# Managed by home-it (`homeit ha deploy-panel`); edit ~/.home-it/homeassistant/home_panel.json instead.\n"
                  + json.dumps([entry], indent=2, ensure_ascii=False) + "\n")
 
