@@ -279,6 +279,20 @@ button{font:inherit;color:inherit}
 .thumb .play{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.45);color:#ffffff}
 .thumb .cap{position:absolute;left:12px;right:12px;bottom:10px;display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;color:#ffffff;text-shadow:0 1px 4px rgba(0,0,0,.7)}
 .thumb .none{position:absolute;inset:0;display:grid;place-items:center;padding-top:10px;color:#8d96a8;font-size:13px;font-weight:700}
+/* On the tablet the card thumbnail takes whatever height the rows leave, so a camera row never pushes the card past the screen. */
+.c-safety .thumb{flex:1 1 0;min-height:96px;max-height:300px;aspect-ratio:auto}
+.cams{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.cam{all:unset;box-sizing:border-box;cursor:pointer;position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#1b1f1c;min-width:0}
+.cam img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cam .tl{position:absolute;top:8px;left:8px;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;padding:4px 8px;font-size:10.5px;background:rgba(0,0,0,.55);color:#ffffff}
+.cam .cap{position:absolute;left:9px;right:9px;bottom:7px;display:flex;justify-content:space-between;gap:6px;font-size:12px;font-weight:700;color:#ffffff;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+.cam .cap span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cam .cap .lo{color:#fbbf24}
+.cam .none{position:absolute;inset:0;display:grid;place-items:center;padding-top:8px;color:#8d96a8;font-size:12.5px;font-weight:700}
+.cam.off img{opacity:.35;filter:grayscale(1)}
+.cam.off .tl{background:#fbbf24;color:#000000}
+.cam.moving{box-shadow:0 0 0 2px var(--alert),0 0 24px -6px var(--alert)}
+.cam.moving .tl{background:var(--alert);color:#ffffff}
 
 .layer{position:absolute;inset:0;z-index:5;background:var(--scrim);display:grid;place-items:center}
 .layer.anim{animation:fade .2s ease-out}
@@ -367,6 +381,8 @@ button{font:inherit;color:inherit}
   .col{display:contents}
   .c-safety{order:1}.c-actions{order:2}.c-weather{order:3}.c-energy{order:4}.c-rooms{order:5}.c-ev{order:6}.c-cal{order:7}
   .card.grow{flex:none}
+  .c-safety .thumb{flex:none;max-height:none;aspect-ratio:16/9}
+  .cams{grid-template-columns:1fr 1fr}
   .rooms{grid-auto-rows:auto}
   .room{min-height:104px}
   .tile{gap:9px;padding:10px}
@@ -511,6 +527,36 @@ class HomePanel extends HTMLElement {
     const ding = this.t(c.ding), now = Date.now();
     return { c, ding, ringing: !!(ding && now - ding < (c.ring_alert_seconds ?? 180) * 1000), motion: this.t(c.motion), activity: this.t(c.activity) };
   }
+  // Cameras and their alarm mode (config `security`). Motion counts as an alert only while armed.
+  security() {
+    const c = this.cfg.security || {};
+    if (!c.mode && !(c.cameras || []).length) return null;
+    const now = Date.now(), win = (c.motion_alert_seconds ?? 180) * 1000, lowAt = c.low_battery ?? 20;
+    const cams = (c.cameras || []).map((x) => {
+      const bat = this.n(x.battery), last = this.lastRec(x.last);
+      const off = x.connected ? this.v(x.connected) !== 'on' : !this.ok(x.camera);
+      const ls = this.s(x.last);
+      return { ...x, bat, last, off, low: !off && bat !== null && bat < lowAt, what: ls ? ls.attributes.object_type : null,
+        moving: !off && (this.on(x.motion) || !!(last && now - last >= 0 && now - last < win)) };
+    });
+    const mode = this.ui.pend.mode ?? this.v(c.mode);
+    const armed = !!mode && mode.startsWith('armed');
+    const latest = cams.filter((x) => x.last).sort((a, b) => b.last - a.last)[0] || null;
+    const moving = cams.filter((x) => x.moving);
+    return { c, cams, mode, armed, latest, moving, alert: armed && moving.length > 0, off: cams.filter((x) => x.off), low: cams.filter((x) => x.low) };
+  }
+  // A "last recording" sensor may hold "MM-DD HH:MM" (local time, no year) instead of an ISO timestamp.
+  lastRec(id) {
+    const x = this.v(id), m = x && /^(\d{1,2})-(\d{1,2}) (\d{1,2}):(\d{2})$/.exec(x);
+    if (!m) return this.t(id);
+    const now = new Date(), d = new Date(now.getFullYear(), m[1] - 1, +m[2], +m[3], +m[4]);
+    if (d - now > 864e5) d.setFullYear(d.getFullYear() - 1);
+    return d;
+  }
+  modeName(m) {
+    return { disarmed: 'Disarmed', armed_home: 'Armed · Home', armed_away: 'Armed · Away', armed_night: 'Armed · Night', arming: 'Arming',
+      pending: 'Pending', triggered: 'Triggered', unavailable: 'Unavailable' }[m] || (m ? m.replace(/_/g, ' ') : '—');
+  }
   offline() {
     const h = this.cfg.health || {};
     const bad = [];
@@ -531,6 +577,8 @@ class HomePanel extends HTMLElement {
   status() {
     const db = this.doorbell(), ws = this.workshop(), ev = this.ev(), T = tou(new Date(), this.cfg.tou);
     if (db.ringing) return { c: 'alert', t: `Doorbell rang at ${fmtTime(db.ding)}`, open: 'safety' };
+    const sec = this.security();
+    if (sec && sec.alert) return { c: 'alert', t: `Motion at ${sec.moving.map((x) => x.name).join(', ')}`, open: 'safety' };
     if (ws && ws.warn) return { c: 'alert', t: 'Laser running with the exhaust off', open: 'room:workshop' };
     if (ev && ev.charging && T.peak) return { c: 'alert', t: 'EV charging at peak price', open: 'ev' };
     const off = this.offline();
@@ -652,17 +700,36 @@ class HomePanel extends HTMLElement {
 
   // ---------- cards ----------
   safetyCard() {
-    const db = this.doorbell(), off = this.offline(), nas = this.nas();
+    const db = this.doorbell(), off = this.offline(), nas = this.nas(), sec = this.security();
     const last = db.activity || db.motion;
     const healthOk = !off.bad.length && !nas.bad.length;
-    return `<section class="card c-safety grow" data-open="safety"><div class="card-h"><h2 class="ct">Front door</h2><span class="st">${db.ringing ? '<span class="chip" style="--c:var(--alert)">Act now</span>' : 'All quiet'}</span></div>
+    const head = db.ringing || (sec && sec.alert) ? '<span class="chip" style="--c:var(--alert)">Act now</span>'
+      : sec && sec.c.mode ? (sec.armed ? `<span class="chip" style="--c:var(--acc)">${esc(this.modeName(sec.mode))}</span>` : esc(this.modeName(sec.mode)))
+      : 'All quiet';
+    return `<section class="card c-safety grow" data-open="safety"><div class="card-h"><h2 class="ct">${sec ? 'Security' : 'Front door'}</h2><span class="st">${head}</span></div>
       ${this.thumb(db)}
       <div class="rows">
         <div class="row ${db.ringing ? 'act' : ''}">${ic('bell')}<div class="rx"><div class="nm">${db.ringing ? 'Someone is at the door' : 'Doorbell'}</div><div class="sv">${db.ding ? (db.ringing ? 'Rang at ' : 'Last ring ') + relTime(db.ding) : 'No rings yet'}</div></div>${db.ringing ? '<span class="chip" style="--c:var(--alert)">View</span>' : ''}</div>
-        <div class="row">${ic('door')}<div class="rx"><div class="nm">Activity</div><div class="sv">${last ? 'Last at ' + relTime(last) : 'Nothing recorded'}</div></div></div>
+        <div class="row">${ic('door')}<div class="rx"><div class="nm">${sec ? 'Front door activity' : 'Activity'}</div><div class="sv">${last ? 'Last at ' + relTime(last) : 'Nothing recorded'}</div></div></div>
+        ${sec && sec.cams.length ? this.camRow(sec) : ''}
         <div class="row ${healthOk ? '' : 'warn'}">${ic('shield')}<div class="rx"><div class="nm">${off.bad.length ? `${off.bad.length} of ${off.total} devices offline` : `All ${off.total} devices online`}</div>
           <div class="sv">${nas.bad.length ? 'NAS needs a look' : 'Home Assistant &amp; NAS healthy'}</div></div><span class="dot" style="--c:var(--${healthOk ? 'ok' : 'solar'})"></span></div>
       </div></section>`;
+  }
+  camRow(sec) {
+    const L = sec.latest;
+    const warn = [sec.off.length ? `${sec.off.length} offline` : '', sec.low.length ? `${sec.low.length} low battery` : ''].filter(Boolean).join(', ');
+    const nm = sec.alert ? `Motion at ${sec.moving.map((x) => esc(x.name)).join(', ')}` : `${sec.cams.length} camera${sec.cams.length === 1 ? '' : 's'}`;
+    const sv = [L ? `Last: ${esc(L.name)} ${relTime(L.last)}` : 'No recordings yet', warn].filter(Boolean).join(' · ');
+    return `<div class="row ${sec.alert ? 'act' : warn ? 'warn' : ''}">${ic('camera')}<div class="rx"><div class="nm">${nm}</div><div class="sv">${sv}</div></div>${sec.alert ? '<span class="chip" style="--c:var(--alert)">View</span>' : ''}</div>`;
+  }
+  camTile(x) {
+    const cam = this.s(x.camera), pic = cam && cam.attributes.entity_picture;
+    const cap = x.last ? [x.what, relTime(x.last)].filter(Boolean).join(' · ') : '';
+    return `<button type="button" class="cam ${x.off ? 'off' : ''} ${x.moving ? 'moving' : ''}" data-act="cam:${esc(x.camera)}" aria-label="${esc(x.name)}, live view">
+      <div class="none">${x.off ? 'Offline' : 'No recording yet'}</div>${pic ? `<img src="${esc(pic)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
+      <span class="chip tl">${esc(x.name)}${x.off ? ' · offline' : x.moving ? ' · motion' : ''}</span>
+      <span class="cap"><span>${esc(cap)}</span>${x.bat !== null ? `<span class="${x.low || x.bat === 0 ? 'lo' : ''}">${Math.round(x.bat)}%</span>` : ''}</span></button>`;
   }
   thumb(db, big) {
     const cam = this.s(db.c.camera);
@@ -935,7 +1002,15 @@ class HomePanel extends HTMLElement {
     const vol = this.n(c.volume), levels = c.volume_levels || [['Off', 0], ['Low', 4], ['Med', 8], ['High', 11]];
     const near = (v) => levels.reduce((b, l) => (Math.abs(l[1] - v) < Math.abs(b[1] - v) ? l : b), levels[0])[0];
     const names = off.bad.map((id) => esc((this.s(id) && this.s(id).attributes.friendly_name) || id));
-    return { t: 'Front door', s: db.ringing ? 'Doorbell rang at ' + fmtTime(db.ding) : 'Last activity ' + relTime(db.activity || db.motion), b: `
+    const sec = this.security();
+    const modes = sec && sec.c.mode ? sec.c.modes || [['disarmed', 'Off'], ['armed_home', 'Home'], ['armed_away', 'Away']] : [];
+    const sub = db.ringing ? 'Doorbell rang at ' + fmtTime(db.ding) : sec && sec.alert ? 'Motion at ' + esc(sec.moving.map((x) => x.name).join(', '))
+      : (sec && sec.c.mode ? esc(this.modeName(sec.mode)) + ' · ' : '') + 'Front door ' + relTime(db.activity || db.motion);
+    return { t: sec ? 'Security' : 'Front door', s: sub, b: `
+      ${modes.length ? `<div class="sec"><div class="lbl">${esc(sec.c.mode_label || 'Camera mode')}</div><div class="seg" role="group" aria-label="${esc(sec.c.mode_label || 'Camera mode')}">${modes.map(([v, l]) => `<button type="button" aria-pressed="${sec.mode === v}" data-act="mode:${v}" ${this.ok(sec.c.mode) ? '' : 'disabled'}>${esc(l)}</button>`).join('')}</div></div>` : ''}
+      ${sec && sec.cams.length ? `<div class="sec"><div class="lbl">Cameras</div><div class="cams">${sec.cams.map((x) => this.camTile(x)).join('')}</div>
+        <div class="sub">Tap a camera for live view.${sec.low.length ? ' Low battery: ' + sec.low.map((x) => `${esc(x.name)} ${Math.round(x.bat)}%`).join(', ') + '.' : ''}</div></div>` : ''}
+      ${sec ? '<div class="lbl">Front door</div>' : ''}
       ${this.thumb(db, true)}
       <div class="btns"><button class="btn" data-act="live">${ic('camera')} Watch live</button></div>
       <div class="sec"><div class="lbl">Recent</div><div class="rows">
@@ -1080,6 +1155,15 @@ class HomePanel extends HTMLElement {
           const id = (this.cfg.front_door || {}).live || (this.cfg.front_door || {}).camera;
           if (id) this.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId: id }, bubbles: true, composed: true }));
           return;
+        }
+        case 'cam': this.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId: a.dataset.act.slice(4) }, bubbles: true, composed: true })); return;
+        case 'mode': {
+          const sec = this.security(), svc = { disarmed: 'alarm_disarm', armed_home: 'alarm_arm_home', armed_away: 'alarm_arm_away', armed_night: 'alarm_arm_night' }[v];
+          if (sec && sec.c.mode && svc && v !== sec.mode) {
+            this.ui.pend.mode = v;
+            this.call('alarm_control_panel', svc, { entity_id: sec.c.mode }).finally(() => setTimeout(() => { delete this.ui.pend.mode; this._schedule(true); }, 5000));
+          }
+          break;
         }
         case 'amps': { const ev = this.ev(); if (ev) { this.ui.pend.amps = v; this.call('select', 'select_option', { entity_id: ev.c.amps, option: v }).finally(() => setTimeout(() => { delete this.ui.pend.amps; this._schedule(true); }, 4000)); } break; }
         case 'evstop': { const ev = this.ev(); if (ev && ev.c.stop) this.call('button', 'press', { entity_id: ev.c.stop }); break; }
