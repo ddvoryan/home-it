@@ -93,6 +93,9 @@ Mapping file shape (abridged, placeholders):
     "energy": {"elec_to_date": "sensor.current_bill_electric_cost_to_date", "hourly_statistic": "opower:<id>"},
     "ev": {"power": "sensor.<charger>_power_output", "amps": "select.<charger>_charging_amperage_limit"},
     "front_door": {"camera": "camera.<doorbell>", "live": "camera.<doorbell>_live_view"},
+    "security": {"mode": "alarm_control_panel.<location>", "mode_label": "Camera mode", "low_battery": 20,
+      "cameras": [{"name": "Deck", "camera": "camera.<cam>", "motion": "binary_sensor.<cam>_motion",
+        "last": "sensor.<cam>_last", "battery": "sensor.<cam>_battery", "connected": "binary_sensor.<cam>_connected"}]},
     "health": {"connectivity": ["binary_sensor.<device>_cloud_connection"]},
     "actions": [{"name": "Porch light", "icon": "lantern", "color": "solar", "entity": "switch.<porch>"}],
     "rooms": [{"name": "Living Room", "icon": "sofa", "kind": "climate", "climate": "climate.<thermostat>"}],
@@ -112,6 +115,13 @@ Mapping file shape (abridged, placeholders):
 | `switches` | Plain on/off switches |
 | `workshop` | Outlets with power draw, plus a session start/end |
 | `yard` | Irrigation controller: standby, rain delay and zones |
+
+**Security:** with a `security` block, the Front door card becomes "Security". It adds a camera summary row
+(last recording, offline cameras, batteries under `low_battery` %), and its sheet gets mode buttons and a grid of camera thumbnails.
+Tapping a thumbnail opens HA's live view. `mode` is an `alarm_control_panel`, and the buttons change it with one tap.
+`modes` overrides the default `[["disarmed","Off"],["armed_home","Home"],["armed_away","Away"]]`. While the mode is armed, motion
+(the `motion` sensor, or a recording within `motion_alert_seconds`) raises an act-now alert. `last` may be an ISO timestamp or
+hass-aarlo's `MM-DD HH:MM`. Every key except `name` and `camera` is optional.
 
 **Second tap to confirm:** an item with `confirm_off: true` asks for a second tap before it switches off.
 Starting the EV charger always asks for one.
