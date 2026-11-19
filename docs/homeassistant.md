@@ -52,3 +52,66 @@ Both are read-only.
   network-attached (Ethernet/PoE) Zigbee/Thread coordinators on a NAS.
 - **Integrations that log in to accounts with 2FA** (DSM, UniFi OS) fail forever once 2FA
   is turned on. Give HA its own local account without 2FA and least privilege.
+
+## Wall and phone panel (`ha deploy-panel`)
+
+A custom panel (`panel_custom`) for a wall tablet in landscape and for phones. The layout is three
+columns on screens 700px wide or more (no scrolling), and one scrolling column with full-screen sheets
+on narrower screens. It switches to dark after sunset and light after sunrise. It runs inside HA's own
+frontend, so it uses the viewer's login. The page holds no token.
+
+| Piece | Where it lives |
+|---|---|
+| Generic code: `homeit/homeassistant/panel/home-panel.js`, `loader.js` | `<HA config>/www/home-panel/`, served at `/local/home-panel/` with **no login**, so it must never contain site details |
+| Entity mapping: `~/.home-it/homeassistant/home_panel.json` (private) | `<HA config>/home_panel.yaml` (JSON is valid YAML). `configuration.yaml` includes it with `panel_custom: !include home_panel.yaml`, and HA sends it only to logged-in users |
+| Helper scripts (thermostat fan timer, laser session start and end) | Generated from the mapping and saved through HA's script config API |
+
+```powershell
+.\.venv\Scripts\python.exe -m homeit ha deploy-panel --dry-run   # show what would change
+.\.venv\Scripts\python.exe -m homeit ha deploy-panel             # upload code and scripts
+.\.venv\Scripts\python.exe -m homeit ha deploy-panel --restart   # also restart HA when the YAML changed
+```
+
+- **Code changes:** reload the page; no restart is needed. `loader.js` never changes. It reads the build hash from
+  `version.txt` without caching and imports `home-panel.js?v=<hash>`, so browser caches never serve a stale build.
+- **Mapping changes:** restart HA, because `panel_custom` is read only at startup. The deploy runs HA's
+  config check first and does not restart if the check fails.
+- **Settings:** set `host_config_dir` in `[homeassistant]` to HA's `/config` folder as seen on the NAS.
+  The upload goes over SSH with sudo. Files are installed with the folder's owner.
+
+Mapping file shape (abridged, placeholders):
+
+```json
+{
+  "panel": {"sidebar_title": "Home panel", "sidebar_icon": "mdi:view-dashboard-variant", "url_path": "home-panel"},
+  "config": {
+    "tou": {"utility": "<utility>", "name": "<rate plan>", "peak_start": 17, "peak_end": 20},
+    "people": [{"entity": "person.<name>", "initials": "A", "color": "acc"}],
+    "weather": {"forecast": "weather.home", "temp": "sensor.<station>_temp"},
+    "energy": {"elec_to_date": "sensor.current_bill_electric_cost_to_date", "hourly_statistic": "opower:<id>"},
+    "ev": {"power": "sensor.<charger>_power_output", "amps": "select.<charger>_charging_amperage_limit"},
+    "front_door": {"camera": "camera.<doorbell>", "live": "camera.<doorbell>_live_view"},
+    "health": {"connectivity": ["binary_sensor.<device>_cloud_connection"]},
+    "actions": [{"name": "Porch light", "icon": "lantern", "color": "solar", "entity": "switch.<porch>"}],
+    "rooms": [{"name": "Living Room", "icon": "sofa", "kind": "climate", "climate": "climate.<thermostat>"}],
+    "yard": [{"name": "Front yard", "standby": "switch.<controller>_in_standby_mode", "zones": []}],
+    "calendars": [],
+    "saver": {"start": "02:00", "end": "06:00", "idle_seconds": 120}
+  }
+}
+```
+
+**Room kinds:**
+
+| Kind | What it shows and controls |
+|---|---|
+| `climate` | Mode, setpoints, eco preset, fan with timer |
+| `appliance` | Home Connect state, plus a stop button |
+| `switches` | Plain on/off switches |
+| `workshop` | Outlets with power draw, plus a session start/end |
+| `yard` | Irrigation controller: standby, rain delay and zones |
+
+**Second tap to confirm:** an item with `confirm_off: true` asks for a second tap before it switches off.
+Starting the EV charger always asks for one.
+
+**Colours** are the design guide's tokens: `solar`, `ok`, `home`, `grid`, `ev`, `acc`, `heat` and `alert`.

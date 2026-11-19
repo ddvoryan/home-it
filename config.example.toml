@@ -15,3 +15,4 @@ update_exclude = []             # container names the weekly image update skips
 url = "http://my-nas:8123"      # LAN URL of the Home Assistant container
 keyring_service = "home-it/homeassistant"
 token_name = "<svc-user>"       # long-lived access token of the dedicated HA user, stored in the keyring
+host_config_dir = "/volume1/docker/homeassistant"  # HA /config folder on the NAS, used by `ha deploy-panel`
