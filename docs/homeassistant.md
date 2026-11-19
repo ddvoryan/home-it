@@ -74,6 +74,8 @@ frontend, so it uses the viewer's login. The page holds no token.
 
 - **Code changes:** reload the page; no restart is needed. `loader.js` never changes. It reads the build hash from
   `version.txt` without caching and imports `home-panel.js?v=<hash>`, so browser caches never serve a stale build.
+  HA serves `/local/` with a 31-day cache, so `module_url` carries the loader's own hash as well. A change to the
+  loader therefore changes the YAML and needs one restart, and devices that cached an older loader then fetch the new one.
 - **Mapping changes:** restart HA, because `panel_custom` is read only at startup. The deploy runs HA's
   config check first and does not restart if the check fails.
 - **Settings:** set `host_config_dir` in `[homeassistant]` to HA's `/config` folder as seen on the NAS.
