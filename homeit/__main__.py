@@ -68,6 +68,11 @@ def _syn_update_images(a):
     updates.main(dry_run=a.dry_run, only=a.only, force_rollback=a.force_rollback)
 
 
+def _syn_usb_sync(a):
+    from homeit.synology import usbsync
+    usbsync.main(dry_run=a.dry_run, force=a.force)
+
+
 def _redirect_if_windowless():
     """Under pythonw (Task Scheduler) there is no console: log to ~/.home-it/logs/homeit.log."""
     if sys.stdout is None or sys.stderr is None:
@@ -139,6 +144,10 @@ def main(argv=None):
     up.add_argument("--only", nargs="+", metavar="NAME", help="limit to these containers")
     up.add_argument("--force-rollback", action="store_true", help=argparse.SUPPRESS)
     up.set_defaults(fn=_syn_update_images)
+    us = syn.add_parser("usb-sync", help="weekly: rebuild the single-version USB backup task's folder list from rules")
+    us.add_argument("--dry-run", action="store_true", help="show what would change")
+    us.add_argument("--force", action="store_true", help="allow removing more than max_drop_pct of entries")
+    us.set_defaults(fn=_syn_usb_sync)
 
     ha = g.add_parser("ha", help="Home Assistant").add_subparsers(dest="cmd", required=True)
     ha.add_parser("set-token", help="store the HA long-lived access token in the keyring").set_defaults(fn=_ha_set_token)

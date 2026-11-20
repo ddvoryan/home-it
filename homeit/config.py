@@ -69,7 +69,8 @@ def load() -> dict:
 
 
 def synology() -> SynologyConfig:
-    return SynologyConfig(**load()["synology"])
+    c = {k: v for k, v in load()["synology"].items() if not isinstance(v, dict)}  # sub-tables like [synology.usb_backup]
+    return SynologyConfig(**c)
 
 
 def homeassistant() -> HomeAssistantConfig:

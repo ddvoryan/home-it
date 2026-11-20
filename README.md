@@ -35,6 +35,9 @@ Reports and snapshots land in `~/.home-it/data/synology/` (`latest.md` is always
 - `update-images` tags each running container's image `<repo>:homeit-prev`, runs one-shot Watchtower
   (config-preserving recreate), verifies health, **rolls back** failures (`--no-pull` recreate on the prev tag),
   then prunes dangling images. `--dry-run` and `--only NAME` are available.
+- `usb-sync` (Sun 02:30, optional) rebuilds a single-version Hyper Backup task's folder list from
+  `roots` / `exclude` / `protect` rules in site config. Those tasks can't use exclude rules, so new folders
+  would otherwise never be backed up, and a renamed one fails the whole task.
 - Snapshots: hourly ones are kept for 3 days, then the first of each day for 90 days.
 
 ## Design
