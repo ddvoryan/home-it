@@ -11,6 +11,14 @@ keyring_service = "home-it/synology"
 docker_bin = "/usr/local/bin/docker"
 update_exclude = []             # container names the weekly image update skips
 
+# Optional: `synology usb-sync` keeps a single-version Hyper Backup task's folder list current.
+[synology.usb_backup]
+task_name = "USB_Backup"        # Hyper Backup task name
+roots = ["/media", "/docker"]   # share paths to back up
+exclude = ["/media/downloads", "/media/TV/<show>"]   # paths inside roots to leave out
+protect = ["/media/TV/<must-keep show>"]             # abort (critical alert) if these would not be backed up
+max_drop_pct = 10               # refuse to drop more than this % of entries in one run (unless --force)
+
 [homeassistant]
 url = "http://my-nas:8123"      # LAN URL of the Home Assistant container
 keyring_service = "home-it/homeassistant"

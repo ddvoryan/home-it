@@ -20,11 +20,14 @@
   *dangling* images left behind by previous updates).
 - **Ask first**: DSM or package updates, changing DSM settings, storage, shares, users, Hyper Backup
   task edits, deleting containers, tagged images, volumes or data, and anything touching Plex (a separate project).
-- Scheduled runs: the hourly `check` and the Claude relay/digest tasks are **read-only**. Only the weekly
-  `update-images` job changes anything.
+- Scheduled runs: the hourly `check` and the Claude relay/digest tasks are **read-only**. Only two weekly
+  jobs change anything: `update-images`, and `usb-sync`, which may rewrite the USB backup task's folder
+  list from the owner's rules in site config (approved by the owner 2026-11-19). Changing those rules,
+  or any other Hyper Backup edit, is still ask-first.
 
 ## Recurring jobs
-- Task Scheduler `\home-it\NAS hourly check` (`check`) and `\home-it\NAS weekly image update` (Sun 04:00).
+- Task Scheduler `\home-it\NAS hourly check` (`check`), `\home-it\NAS USB backup folder sync` (Sun 02:30)
+  and `\home-it\NAS weekly image update` (Sun 04:00).
 - Claude scheduled tasks `nas-alert-relay` (every 2h, 08:15-22:15) and `nas-morning-digest` (07:30) deliver
   alerts by push notification and email to the owner only.
 - Interactive checks: the `synology-health` skill in `.claude/skills/`.

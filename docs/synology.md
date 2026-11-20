@@ -65,7 +65,23 @@ Then restrict the key to the LAN by prefixing its line in `authorized_keys` with
 - **The DSM cert is self-signed and expires.** When DSM renews it, `pin-cert` will report a mismatch.
   Verify the change was expected, then update `cert_sha256`.
 - The Hyper Backup task API returns cloud-target **refresh tokens**. The inventory deliberately
-  doesn't call `SYNO.Backup.Task get`, and redacts token-like keys anyway.
+  doesn't call `SYNO.Backup.Task get`, and redacts token-like keys anyway. (`usb-sync` calls `get`
+  only on the local USB task and reads just `source`.)
+- **DSM refuses setting changes from a custom session name** (error 119). Log in with
+  `dsm(cfg, session_name="webui")` for anything that writes. Read calls work with any name.
+- **Write APIs with `requestFormat: JSON` want string params JSON-encoded**: send `'"0"'`, not `'0'`
+  (error 114 otherwise). To find a method's parameters, grep the app's UI code under
+  `/usr/syno/synoman/webman/3rdparty/<App>/` or `/var/packages/<Pkg>/target/ui/` (needs sudo).
+- **Resuming paused data scrubbing**: `SYNO.Storage.CGI.Storage` · `set_data_scrubbing_schedule_status`
+  with `schedule_status='"0"'` (`"1"` pauses), as Storage Manager's Resume button does.
+- **Single-version Hyper Backup tasks have no exclude rules.** The UI only offers file filters and
+  folder exclusions for multi-version (`.hbk`) tasks, so a single-version task stores every
+  ticked folder explicitly. New sub-folders are never picked up and a renamed or deleted one fails
+  the whole task (`source_not_available`, code 4401). `synology usb-sync` rebuilds the list weekly.
+- **Changing a task's folders**: `SYNO.Backup.Task` · `set` · 1 with `task_id`, `repo_id`,
+  `target_type`, `transfer_type` and `source={"file_list": [paths], "app_list": [], "app_config": []}`.
+  Other settings and the schedule are left alone. The config lives in
+  `/var/packages/HyperBackup/etc/synobackup.conf`; `usb-sync` copies it before each change.
 
 ## Recurring jobs
 
@@ -82,6 +98,10 @@ Register-ScheduledTask -TaskPath '\home-it\' -TaskName 'NAS hourly check' -Princ
 Register-ScheduledTask -TaskPath '\home-it\' -TaskName 'NAS weekly image update' -Principal $prin -Settings $set `
   -Action (New-ScheduledTaskAction -Execute $pyw -Argument '-m homeit synology update-images' -WorkingDirectory $repo) `
   -Trigger (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 4:00)
+# only if [synology.usb_backup] is configured; runs before the task's own Sunday 03:00 schedule
+Register-ScheduledTask -TaskPath '\home-it\' -TaskName 'NAS USB backup folder sync' -Principal $prin -Settings $set `
+  -Action (New-ScheduledTaskAction -Execute $pyw -Argument '-m homeit synology usb-sync' -WorkingDirectory $repo) `
+  -Trigger (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At 2:30)
 ```
 
 `pythonw` has no console, so output goes to `~/.home-it/logs/homeit.log`, and `ssh` is started with
@@ -98,5 +118,7 @@ Register-ScheduledTask -TaskPath '\home-it\' -TaskName 'NAS weekly image update'
 | Installed packages | `SYNO.Core.Package` · `list` · 2 (`additional=["status"]`) |
 | Package catalog (latest versions) | `SYNO.Core.Package.Server` · `list` · 2 |
 | Hyper Backup tasks / status | `SYNO.Backup.Task` · `list` / `status` · 1 |
+| Hyper Backup task folders (write, `webui` session) | `SYNO.Backup.Task` · `get` / `set` · 1 |
+| Scrub schedule pause/resume (write, `webui` session) | `SYNO.Storage.CGI.Storage` · `set_data_scrubbing_schedule_status` · 1 |
 | Security Advisor summary | `SYNO.Core.SecurityScan.Status` · `system_get` · 1 |
 | Containers / images (`upgradable`) / projects | `SYNO.Docker.Container` / `.Image` / `.Project` · `list` · 1 |
