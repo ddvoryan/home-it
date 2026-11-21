@@ -76,6 +76,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const fmtTime = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 const fmtHour = (h) => (h % 12 || 12) + (h < 12 || h === 24 ? ' AM' : ' PM');
 const sameDay = (a, b) => a.toDateString() === b.toDateString();
+const fmtVol = (x) => (x === null || x === undefined ? '—' : x < 10 ? (Math.round(x * 10) / 10).toString() : Math.round(x).toLocaleString());
 function relTime(d, now = new Date()) {
   if (!d || isNaN(d)) return '—';
   if (sameDay(d, now)) return fmtTime(d);
@@ -169,11 +170,11 @@ button{font:inherit;color:inherit}
 .clock{grid-area:clock;font-family:var(--f-num);font-weight:500;font-size:42px;letter-spacing:-.05em;line-height:1;font-variant-numeric:tabular-nums}
 .clock small{font-size:13px;letter-spacing:0;margin-left:4px;color:var(--d);font-weight:600}
 
-.body{flex:1;min-height:0;display:grid;grid-template-columns:1.14fr 1fr 1fr;gap:12px}
-.col{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
-.card{background:var(--card);border:1px solid var(--brd);border-radius:26px;padding:15px 16px 16px;box-shadow:var(--shadow);
+.body{flex:1;min-height:0;display:grid;grid-template-columns:1.14fr 1fr 1fr;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0}
+.card{background:var(--card);border:1px solid var(--brd);border-radius:24px;padding:13px 15px 14px;box-shadow:var(--shadow);
   -webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);
-  display:flex;flex-direction:column;gap:12px;min-height:0;overflow:hidden;cursor:pointer;position:relative;flex:none}
+  display:flex;flex-direction:column;gap:10px;min-height:0;overflow:hidden;cursor:pointer;position:relative;flex:none}
 .card.grow{flex:1 1 auto}
 .card-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .ct{font-family:var(--f-num);font-weight:600;font-size:15px;margin:0;letter-spacing:-.01em;white-space:nowrap}
@@ -203,14 +204,33 @@ button{font:inherit;color:inherit}
 .blegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;font-weight:700;color:var(--d);margin-top:6px}
 .eline{display:flex;align-items:baseline;gap:10px}
 .eline .ic{margin-left:auto;color:var(--d);align-self:center}
+.ph-only{display:none!important}
+.mline{display:flex;align-items:center;gap:12px;min-width:0}
+.mtxt{display:flex;flex-direction:column;gap:3px;flex:0 1 auto;min-width:0;max-width:58%}
+.mtxt .num{font-size:23px;line-height:1}
+.mtxt .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mviz{flex:1 1 0;min-width:56px}
+.mviz .tou-wrap{padding-top:4px}
+.mline>.ic{color:var(--d)}
+.rows.fit{flex:1;min-height:0;display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;overflow:hidden}
+.rows.fit>*{width:100%}
+.c-cal .row{min-height:42px;padding:1px 2px}
+.c-cal .badge{width:40px;height:40px}
+.c-water,.c-energy{gap:9px}
+.fc.dry .p{display:none}
+.num small.u{font-family:var(--f-ui);font-size:13px;font-weight:600;letter-spacing:0;color:var(--d);margin-left:4px}
+.wstrip{display:flex;align-items:flex-end;gap:2px;height:18px}
+.wstrip i{flex:1;border-radius:2px;background:var(--home);min-height:2px}
+.wstrip i.z{background:color-mix(in srgb,var(--grid) 25%,transparent)}
 
-.qa{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.tile{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:11px;min-height:62px;padding:10px 12px;
-  border-radius:18px;background:var(--tile);border:1px solid var(--tile-brd);transition:background .3s,box-shadow .3s,border-color .3s;min-width:0}
-.tile .bub{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:var(--d);background:color-mix(in srgb,var(--d) 10%,transparent);flex:none}
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tile{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:9px;min-height:50px;padding:6px 10px;
+  border-radius:16px;background:var(--tile);border:1px solid var(--tile-brd);transition:background .3s,box-shadow .3s,border-color .3s;min-width:0}
+.tile .bub{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:var(--d);background:color-mix(in srgb,var(--d) 10%,transparent);flex:none}
+.tile .bub .ic{width:19px;height:19px}
 .tile .tx{min-width:0}
-.tile .nm{font-size:14.5px;font-weight:700;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.tile .sv{font-size:12.5px;font-weight:600;color:var(--d);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .nm{font-size:13.5px;font-weight:700;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile .sv{font-size:12px;font-weight:600;color:var(--d);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile.na{opacity:.45}
 .on{background:color-mix(in srgb,var(--c) 13%,var(--tile));border-color:color-mix(in srgb,var(--c) 38%,transparent);
   box-shadow:0 0 26px -8px color-mix(in srgb,var(--c) 70%,transparent)}
@@ -326,6 +346,11 @@ button{font:inherit;color:inherit}
 .hrs{display:flex;align-items:flex-end;gap:3px;height:110px}
 .hrs i{flex:1;border-radius:4px 4px 1px 1px;background:color-mix(in srgb,var(--grid) 45%,transparent);min-height:2px}
 .hrs i.pk{background:var(--solar)}
+.hrs.water i{background:color-mix(in srgb,var(--home) 65%,transparent)}
+.hrs.water i.fut,.hrs.water i.none{background:color-mix(in srgb,var(--grid) 15%,transparent)}
+.hrs.water i.tdy{background:var(--home)}
+.hrs.days{position:relative}
+.hrs .avg{position:absolute;left:0;right:0;height:0;border-top:2px dashed var(--d);opacity:.55;pointer-events:none}
 .hrsx{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--d)}
 .saver{position:absolute;inset:0;z-index:8;background:var(--saver);cursor:pointer;display:grid;place-items:center}
 .saver .inner{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--saver-t);animation:drift 50s ease-in-out infinite alternate}
@@ -342,11 +367,11 @@ button{font:inherit;color:inherit}
   .body{grid-template-columns:1.05fr 1fr 1fr}
   .card{padding:13px 12px 14px;gap:10px}
   .top{gap:14px}
-  .tile{gap:8px;padding:8px 9px;min-height:58px}
-  .tile .bub{width:30px;height:30px;border-radius:10px}
-  .tile .bub .ic{width:19px;height:19px}
-  .tile .nm{font-size:13.5px}
-  .tile .sv{font-size:12px}
+  .tile{gap:7px;padding:5px 8px;min-height:46px}
+  .tile .bub{width:28px;height:28px;border-radius:9px}
+  .tile .bub .ic{width:17px;height:17px}
+  .tile .nm{font-size:13px}
+  .tile .sv{font-size:11.5px}
   .room .ri{padding:9px 10px}
   .room .rn{font-size:13px}
   .room .rv{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -379,8 +404,10 @@ button{font:inherit;color:inherit}
   .clock{font-size:36px}
   .body{display:flex;flex-direction:column}
   .col{display:contents}
-  .c-safety{order:1}.c-actions{order:2}.c-weather{order:3}.c-energy{order:4}.c-rooms{order:5}.c-ev{order:6}.c-cal{order:7}
+  .c-safety{order:1}.c-actions{order:2}.c-weather{order:3}.c-water{order:4}.c-energy{order:5}.c-rooms{order:6}.c-ev{order:7}.c-cal{order:8}
   .card.grow{flex:none}
+  .yard.ph-only{display:flex!important}
+  .ct .ph-only{display:inline!important}
   .c-safety .thumb{flex:none;max-height:none;aspect-ratio:16/9}
   .cams{grid-template-columns:1fr 1fr}
   .rooms{grid-auto-rows:auto}
@@ -398,7 +425,7 @@ class HomePanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this.ui = { sheet: null, shown: null, armed: null, lastTouch: Date.now(), wakeUntil: 0, fc: null, cal: [], calAt: 0, hours: null, hoursAt: 0, pend: {} };
+    this.ui = { sheet: null, shown: null, armed: null, lastTouch: Date.now(), wakeUntil: 0, fc: null, cal: [], calAt: 0, hours: null, hoursAt: 0, water: null, waterAt: 0, pend: {} };
     this._sig = '';
     this._holding = false;
     this._pending = false;
@@ -454,6 +481,7 @@ class HomePanel extends HTMLElement {
   on(id) { return this.v(id) === 'on'; }
   t(id) { const x = this.v(id); const d = x ? new Date(x) : null; return d && !isNaN(d) ? d : null; }
   ok(id) { const x = this.v(id); return x !== undefined && x !== 'unavailable'; }
+  u(id, d = '') { const x = this.s(id); return (x && x.attributes.unit_of_measurement) || d; }
   call(domain, service, data) { return this._hass.callService(domain, service, data).catch((e) => console.warn('home-panel', domain, service, e)); }
 
   _start() {
@@ -522,6 +550,38 @@ class HomePanel extends HTMLElement {
     const clearing = room.end_script && this.on(room.end_script);
     return { room, out, laser, ex, cutting, warn: !!(cutting && ex && !ex.on), clearing };
   }
+  // Whole-house water meter (config `water`, e.g. Flume). Leak and high-flow alerts come from the meter's own cloud.
+  water() {
+    const c = this.cfg.water || {};
+    if (!c.today && !c.flow) return null;
+    const flow = this.n(c.flow);
+    return { c, flow, flowing: (flow || 0) > 0.01, today: this.n(c.today), week: this.n(c.week), month: this.n(c.month),
+      hour: this.n(c.last_hour), d24: this.n(c.last_24h), d30: this.n(c.last_30d), unit: this.u(c.today, 'gal'), rate: this.u(c.flow, 'gal/min'),
+      leak: this.on(c.leak), high: this.on(c.high_flow), lowBat: this.on(c.low_battery),
+      offline: (c.connectivity || []).filter((id) => this.v(id) !== 'on'), avail: this.ok(c.today || c.flow) };
+  }
+  // Today's use by hour and the last 30 days by day, from HA's long-term statistics of the "today" meter.
+  waterHistory(w) {
+    const H = this.ui.water; if (!H) return null;
+    const now = new Date(), d0 = new Date(now); d0.setHours(0, 0, 0, 0);
+    const hrs = Array(24).fill(null);
+    for (const x of H.hrs) if (sameDay(x.d, now)) hrs[x.d.getHours()] = x.v;
+    for (let i = 0; i < now.getHours(); i++) if (hrs[i] === null) hrs[i] = 0;
+    // statistics lag up to an hour: whatever today's meter shows beyond the recorded hours belongs to the current hour
+    const rec = hrs.reduce((a, v) => a + (v || 0), 0);
+    if (w.today !== null) hrs[now.getHours()] = (hrs[now.getHours()] || 0) + Math.max(0, w.today - rec);
+    const byDay = new Map(H.days.map((x) => [x.d.toDateString(), x.v]));
+    const days = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(d0); d.setDate(d.getDate() - i);
+      days.push({ d, v: i === 0 ? w.today : byDay.has(d.toDateString()) ? byDay.get(d.toDateString()) : null });
+    }
+    const first = days.findIndex((x) => x.v !== null);
+    // recording began partway through its first day, so that day's total would understate it
+    if (first > 0 && first < 29) days[first].v = null;
+    const full = days.slice(0, -1).filter((x) => x.v !== null);
+    return { hrs, days, first: first >= 0 ? days[first].d : null, full };
+  }
   doorbell() {
     const c = this.cfg.front_door || {};
     const ding = this.t(c.ding), now = Date.now();
@@ -579,10 +639,14 @@ class HomePanel extends HTMLElement {
     if (db.ringing) return { c: 'alert', t: `Doorbell rang at ${fmtTime(db.ding)}`, open: 'safety' };
     const sec = this.security();
     if (sec && sec.alert) return { c: 'alert', t: `Motion at ${sec.moving.map((x) => x.name).join(', ')}`, open: 'safety' };
+    const wa = this.water();
+    if (wa && wa.leak) return { c: 'alert', t: 'Possible water leak', open: 'water' };
+    if (wa && wa.high) return { c: 'alert', t: 'Unusually high water flow', open: 'water' };
     if (ws && ws.warn) return { c: 'alert', t: 'Laser running with the exhaust off', open: 'room:workshop' };
     if (ev && ev.charging && T.peak) return { c: 'alert', t: 'EV charging at peak price', open: 'ev' };
     const off = this.offline();
     if (off.bad.length) return { c: 'solar', t: `${off.bad.length} device${off.bad.length > 1 ? 's' : ''} offline`, open: 'safety' };
+    if (wa && wa.lowBat) return { c: 'solar', t: 'Water meter battery low', open: 'water' };
     if (T.peak) return { c: 'solar', t: `Peak price ${T.next}${ev && ev.plugged ? ' · EV waits' : ''}`, open: 'energy' };
     if (ev && ev.charging) return { c: 'ev', t: `EV charging · ${ev.kw.toFixed(1)} kW`, open: 'ev' };
     return { c: 'ok', t: 'All systems normal', calm: true, open: 'safety' };
@@ -612,7 +676,7 @@ class HomePanel extends HTMLElement {
     if (!this._hass || !this.shadowRoot.getElementById('screen')) return;
     if (this._holding) { this._pending = true; return; }
     const sig = this._allIds().map((id) => { const x = this._hass.states[id]; return x ? x.last_updated : '-'; }).join('|')
-      + JSON.stringify(this.ui.pend) + (this.ui.fc ? this.ui.fc.length : 0) + this.ui.calAt + this.ui.hoursAt;
+      + JSON.stringify(this.ui.pend) + (this.ui.fc ? this.ui.fc.length : 0) + this.ui.calAt + this.ui.hoursAt + this.ui.waterAt;
     if (!this._force && sig === this._sig) return;
     this._force = false; this._sig = sig;
     this._maybeFetch();
@@ -624,7 +688,7 @@ class HomePanel extends HTMLElement {
     sc.innerHTML = `<div class="wrap">${this.header(st)}<div class="body">
       <div class="col">${this.safetyCard()}${this.evCard()}</div>
       <div class="col">${this.actionsCard()}${this.roomsCard()}</div>
-      <div class="col">${this.weatherCard()}${this.energyCard()}${this.calendarCard()}</div></div></div>`;
+      <div class="col">${this.weatherCard()}${this.waterCard()}${this.energyCard()}${this.calendarCard()}</div></div></div>`;
     sc.scrollTop = keep;
     let html = '';
     if (this.saverOn()) {
@@ -645,6 +709,7 @@ class HomePanel extends HTMLElement {
 
   _maybeFetch() {
     const now = Date.now();
+    this._fetchWater();
     const cals = this.cfg.calendars || [];
     if (cals.length && now - this.ui.calAt > 15 * 60e3 && !this._calBusy) {
       this._calBusy = true;
@@ -653,11 +718,31 @@ class HomePanel extends HTMLElement {
       Promise.all(cals.map((c) => this._hass.callApi('GET', `calendars/${c.entity || c}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`)
         .then((evs) => evs.map((e) => ({ ...e, cal: c.name || '' }))).catch(() => [])))
         .then((lists) => {
-          const all = lists.flat().map((e) => ({ ...e, _s: new Date(e.start.dateTime || e.start.date + 'T00:00:00'), allDay: !e.start.dateTime }));
+          // an event shared between calendars shows once, labelled with every calendar it's on
+          const seen = new Map();
+          for (const e of lists.flat()) {
+            const key = `${e.summary}|${e.start.dateTime || e.start.date}`, prev = seen.get(key);
+            if (prev) { if (e.cal && !prev.cal.split(' · ').includes(e.cal)) prev.cal = [prev.cal, e.cal].filter(Boolean).join(' · '); continue; }
+            seen.set(key, { ...e, _s: new Date(e.start.dateTime || e.start.date + 'T00:00:00'), allDay: !e.start.dateTime });
+          }
+          const all = [...seen.values()];
           all.sort((a, b) => a._s - b._s);
           this.ui.cal = all; this.ui.calAt = Date.now(); this._calBusy = false; this._schedule(true);
         });
     }
+  }
+  _fetchWater() {
+    const c = this.cfg.water || {}, sid = c.statistic || c.today;
+    if (!sid || this._waterBusy || Date.now() - this.ui.waterAt < 10 * 60e3) return;
+    this._waterBusy = true;
+    const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    const m0 = new Date(d0); m0.setDate(m0.getDate() - 30);
+    const q = (start, period) => this._hass.callWS({ type: 'recorder/statistics_during_period', start_time: start.toISOString(), statistic_ids: [sid], period, types: ['change'] })
+      .then((r) => (r[sid] || []).map((x) => ({ d: new Date(x.start), v: Math.max(0, x.change || 0) })));
+    Promise.all([q(d0, 'hour'), q(m0, 'day')])
+      .then(([hrs, days]) => { this.ui.water = { hrs, days }; })
+      .catch((e) => console.warn('home-panel water history', e))
+      .finally(() => { this.ui.waterAt = Date.now(); this._waterBusy = false; this._schedule(true); });
   }
   _fetchHours() {
     const stat = (this.cfg.energy || {}).hourly_statistic;
@@ -851,13 +936,14 @@ class HomePanel extends HTMLElement {
     const standby = yards.filter((y) => this.on(y.standby)).map((y) => y.name);
     const yt = zonesOn.length ? `Watering: ${zonesOn.join(', ')}` : delay.length ? `Rain delay: ${delay.join(' & ')}` : 'Irrigation on schedule';
     const ys = standby.length ? `${standby.join(' & ')} on standby` : this.raining() ? 'Raining now' : `${yards.length} controllers ready`;
-    return `<section class="card c-weather grow" data-open="weather">
-      <div class="card-h"><h2 class="ct">Weather &amp; yard</h2><span class="st">${this.raining() ? '<span class="chip" style="--c:var(--home)">Raining</span>' : 'NWS forecast'}</span></div>
+    // the irrigation row shows on phones only; on a tablet the yard room tiles carry it
+    return `<section class="card c-weather" data-open="weather">
+      <div class="card-h"><h2 class="ct">Weather<span class="ph-only"> &amp; yard</span></h2><span class="st">${this.raining() ? '<span class="chip" style="--c:var(--home)">Raining</span>' : 'NWS forecast'}</span></div>
       <div class="wnow">${wx(WX_KIND[cond] || 'cloud', 52)}<div class="hero">${t !== null ? Math.round(t) + '°' : '—'}</div>
         <div class="wdet"><b>${esc(WX_LABEL[cond] || '')}</b>${feels !== null ? ` · feels ${Math.round(feels)}°` : ''}<br>${wind !== null ? `Wind ${Math.round(wind)} mph · ` : ''}${rd ? `rain today ${rd.toFixed(2)} in` : uv !== null ? `UV ${uv}` : ''}</div></div>
-      <div class="fc">${fc.length ? fc.map((f) => `<div><span class="n">${esc(this.fcLabel(f))}</span>${wx(f.is_daytime === false && WX_KIND[f.condition] === 'pcloudy' ? 'ncloudy' : (WX_KIND[f.condition] || 'cloud'), 26)}<span class="t">${Math.round(f.temperature)}°</span><span class="p">${f.precipitation_probability ? f.precipitation_probability + '%' : '&nbsp;'}</span></div>`).join('')
+      <div class="fc ${fc.some((f) => f.precipitation_probability) ? '' : 'dry'}">${fc.length ? fc.map((f) => `<div><span class="n">${esc(this.fcLabel(f))}</span>${wx(f.is_daytime === false && WX_KIND[f.condition] === 'pcloudy' ? 'ncloudy' : (WX_KIND[f.condition] || 'cloud'), 26)}<span class="t">${Math.round(f.temperature)}°</span><span class="p">${f.precipitation_probability ? f.precipitation_probability + '%' : '&nbsp;'}</span></div>`).join('')
         : '<div style="grid-column:1/-1"><span class="n">Loading forecast…</span></div>'}</div>
-      ${yards.length ? `<button class="yard" data-open="yard"><span class="bub">${ic('sprinkler')}</span><span class="yt"><div class="nm">${esc(yt)}</div><div class="sub">${esc(ys)}</div></span>${ic('chev')}</button>` : ''}
+      ${yards.length ? `<button class="yard ph-only" data-open="yard"><span class="bub">${ic('sprinkler')}</span><span class="yt"><div class="nm">${esc(yt)}</div><div class="sub">${esc(ys)}</div></span>${ic('chev')}</button>` : ''}
     </section>`;
   }
   touBar(big, mini) {
@@ -878,8 +964,27 @@ class HomePanel extends HTMLElement {
     const T = tou(new Date(), this.cfg.tou), b = this.bill();
     return `<section class="card c-energy" data-open="energy">
       <div class="card-h"><h2 class="ct">Energy</h2>${T.peak ? `<span class="chip" style="--c:var(--solar)">Peak ${esc(T.next)}</span>` : `<span class="chip" style="--c:var(--ok)">Off-peak${T.off ? ' all day' : ''}</span>`}</div>
-      ${this.touBar(false, true)}
-      <div class="eline"><span class="num" style="font-size:24px">${b.tot !== null ? '$' + Math.round(b.tot) : '—'}</span><span class="sub">bill so far${b.fc !== null ? ' · forecast $' + Math.round(b.fc) : ''}</span>${ic('chev')}</div>
+      <div class="mline"><div class="mtxt"><span class="num">${b.tot !== null ? '$' + Math.round(b.tot) : '—'}</span><span class="sub">bill so far${b.fc !== null ? ' · ~$' + Math.round(b.fc) : ''}</span></div>
+        <div class="mviz">${this.touBar(false, true)}</div>${ic('chev')}</div>
+    </section>`;
+  }
+  waterChip(w) {
+    if (w.leak) return '<span class="chip" style="--c:var(--alert)">Leak alert</span>';
+    if (w.high) return '<span class="chip" style="--c:var(--alert)">High flow</span>';
+    if (!w.avail || w.offline.length) return '<span class="chip" style="--c:var(--solar)">Offline</span>';
+    if (w.flowing) return `<span class="chip" style="--c:var(--home)">Running · ${fmtVol(w.flow)} ${esc(w.rate.replace('gal/min', 'gpm'))}</span>`;
+    return 'No water running';
+  }
+  waterCard() {
+    const w = this.water();
+    if (!w) return '';
+    const H = this.waterHistory(w);
+    const hm = H ? Math.max(...H.hrs.map((v) => v || 0), 0.1) : 1, h = new Date().getHours();
+    const strip = `<div class="wstrip" aria-hidden="true">${(H ? H.hrs : Array(24).fill(null)).map((v, i) => `<i class="${v ? '' : 'z'}" style="height:${v ? Math.max(12, v / hm * 100) : 0}%"></i>`).join('')}</div>`;
+    return `<section class="card c-water" data-open="water">
+      <div class="card-h"><h2 class="ct">Water</h2><span class="st">${this.waterChip(w)}</span></div>
+      <div class="mline"><div class="mtxt"><span class="num">${fmtVol(w.today)}<small class="u">${esc(w.unit)}</small></span><span class="sub">today${w.d24 !== null ? ` · ${fmtVol(w.d24)} in 24 h` : ''}</span></div>
+        <div class="mviz">${strip}</div>${ic('chev')}</div>
     </section>`;
   }
   calendarCard() {
@@ -889,8 +994,9 @@ class HomePanel extends HTMLElement {
         <div class="empty">${ic('cal')}<span>Link Google Calendar in Home Assistant, then add it to this panel's settings.</span></div></section>`;
     }
     const evs = this.ui.cal.filter((e) => (e.end && new Date(e.end.dateTime || e.end.date) > new Date()) || e._s > new Date());
-    return `<section class="card c-cal" data-open="calendar"><div class="card-h"><h2 class="ct">Calendar</h2><span class="st">Next 7 days</span></div>
-      <div class="rows">${evs.length ? evs.slice(0, 3).map((e) => this.calRow(e)).join('') : '<div class="empty">Nothing scheduled this week.</div>'}</div></section>`;
+    // .fit shows only the events that fit whole; the rest wrap into a hidden second column
+    return `<section class="card c-cal grow" data-open="calendar"><div class="card-h"><h2 class="ct">Calendar</h2><span class="st">Next 7 days</span></div>
+      <div class="rows fit">${evs.length ? evs.slice(0, 6).map((e) => this.calRow(e)).join('') : '<div class="empty">Nothing scheduled this week.</div>'}</div></section>`;
   }
   calRow(e) {
     const d = e._s, today = sameDay(d, new Date());
@@ -904,6 +1010,7 @@ class HomePanel extends HTMLElement {
 
   sheet(k) {
     if (k === 'energy') return this.energySheet();
+    if (k === 'water') return this.waterSheet();
     if (k === 'ev') return this.evSheet();
     if (k === 'yard') return this.yardSheet();
     if (k === 'weather') return this.weatherSheet();
@@ -936,6 +1043,40 @@ class HomePanel extends HTMLElement {
       <div class="kv"><div><span class="lbl">Electric</span><b>$${b.el ?? '—'}</b><span class="sub">of ~$${b.fEl ?? '—'}</span></div><div><span class="lbl">Gas</span><b>$${b.gas ?? '—'}</b><span class="sub">of ~$${b.fGas ?? '—'}</span></div>
         <div><span class="lbl">Typical bill</span><b>$${b.typ !== null ? Math.round(b.typ) : '—'}</b><span class="sub">this time of year</span></div><div><span class="lbl">Price now</span><b style="color:var(--${T.peak ? 'solar' : 'ok'})">${T.peak ? 'Peak' : 'Off-peak'}</b><span class="sub">${esc(T.next)}</span></div></div>
       <div class="sec"><div class="lbl">Latest full day by hour</div>${hrs}</div>` };
+  }
+  waterSheet() {
+    const w = this.water(); if (!w) return null;
+    const H = this.waterHistory(w), u = esc(w.unit), now = new Date();
+    const alerts = [
+      w.leak ? this.row('drop', 'Possible leak', 'The water meter has flagged a leak. Its app shows when it started and how much water it used; the alert clears there.', '', 'act') : '',
+      w.high ? this.row('drop', 'Unusually high flow', 'Water is running faster than the meter expects. Check taps, hoses and irrigation.', '', 'act') : '',
+      w.offline.length ? this.row('server', 'Meter offline', `${w.offline.length} of ${(w.c.connectivity || []).length} parts not connected, so readings may be stale.`, '', 'warn') : '',
+      w.lowBat ? this.row('server', 'Battery low', 'Replace the water sensor batteries soon.', '', 'warn') : '',
+    ].join('');
+    const avg = w.d30 !== null ? w.d30 / 30 : H && H.full.length ? H.full.reduce((a, x) => a + x.v, 0) / H.full.length : null;
+    let hrs = '<div class="sub">Loading today\'s use…</div>', days = '';
+    if (H) {
+      const hm = Math.max(...H.hrs.map((v) => v || 0), 0.1);
+      const top = H.hrs.reduce((b, v, i) => ((v || 0) > (H.hrs[b] || 0) ? i : b), 0);
+      hrs = `<div class="hrs water">${H.hrs.map((v, i) => `<i class="${i > now.getHours() ? 'fut' : ''}" style="height:${(v || 0) / hm * 100}%" title="${fmtHour(i)} · ${fmtVol(v || 0)} ${u}"></i>`).join('')}</div>
+        <div class="hrsx"><span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span></div>
+        <div class="sub">${fmtVol(w.today)} ${u} so far today${H.hrs[top] ? `; the busiest hour was ${fmtHour(top)} with ${fmtVol(H.hrs[top])} ${u}` : ''}.</div>`;
+      const dm = Math.max(...H.days.map((x) => x.v || 0), avg || 0, 0.1);
+      const big = H.full.length ? H.full.reduce((b, x) => (x.v > b.v ? x : b)) : null;
+      const md = (d) => d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      days = `<div class="sec"><div class="lbl">Last 30 days</div>
+        <div class="hrs water days">${avg ? `<b class="avg" style="bottom:${avg / dm * 100}%"></b>` : ''}${H.days.map((x, i) => `<i class="${i === 29 ? 'tdy' : ''} ${x.v === null ? 'none' : ''}" style="height:${(x.v || 0) / dm * 100}%" title="${md(x.d)} · ${x.v === null ? 'no data' : fmtVol(x.v) + ' ' + u}"></i>`).join('')}</div>
+        <div class="hrsx"><span>${md(H.days[0].d)}</span><span>${md(H.days[15].d)}</span><span>Today</span></div>
+        <div class="sub">${H.full.length < 7 ? `Home Assistant started recording water use on ${md(H.first || now)}, so this chart fills in over the coming weeks. ` : ''}${avg ? `The line marks a typical day (${fmtVol(avg)} ${u}${w.d30 !== null ? ', from the meter\'s last 30 days' : ''}).` : ''}${big ? ` Highest recorded day: ${md(big.d)}, ${fmtVol(big.v)} ${u}.` : ''}</div></div>`;
+    } else if (this.ui.waterAt) hrs = '<div class="sub">Usage history is not available.</div>';
+    const k = (l, v, s) => `<div><span class="lbl">${l}</span><b>${v}</b><span class="sub">${s}</span></div>`;
+    const sts = w.leak ? 'Possible leak flagged by the meter' : w.flowing ? `Water running now · ${fmtVol(w.flow)} ${esc(w.rate)}` : 'No water running now';
+    return { t: 'Water', s: esc(sts), b: `
+      ${alerts ? `<div class="rows">${alerts}</div>` : ''}
+      <div class="kv">${k('Flow now', fmtVol(w.flow), esc(w.rate))}${k('Last hour', fmtVol(w.hour), u)}${k('Today', fmtVol(w.today), u)}${k('Last 24 h', fmtVol(w.d24), u)}</div>
+      <div class="kv">${k('This week', fmtVol(w.week), u)}${k('This month', fmtVol(w.month), u)}${k('Last 30 days', fmtVol(w.d30), u)}${k('Typical day', fmtVol(avg), u + ' a day')}</div>
+      <div class="sec"><div class="lbl">Today by hour</div>${hrs}</div>
+      ${days}` };
   }
   flow(ev, T) {
     const on = ev.charging;
