@@ -91,6 +91,8 @@ Mapping file shape (abridged, placeholders):
     "people": [{"entity": "person.<name>", "initials": "A", "color": "acc"}],
     "weather": {"forecast": "weather.home", "temp": "sensor.<station>_temp"},
     "energy": {"elec_to_date": "sensor.current_bill_electric_cost_to_date", "hourly_statistic": "opower:<id>"},
+    "water": {"flow": "sensor.<meter>_current", "today": "sensor.<meter>_current_day", "last_24h": "sensor.<meter>_24_hours",
+      "last_30d": "sensor.<meter>_30_days", "leak": "binary_sensor.<meter>_leak_detected", "high_flow": "binary_sensor.<meter>_high_flow"},
     "ev": {"power": "sensor.<charger>_power_output", "amps": "select.<charger>_charging_amperage_limit"},
     "front_door": {"camera": "camera.<doorbell>", "live": "camera.<doorbell>_live_view"},
     "security": {"mode": "alarm_control_panel.<location>", "mode_label": "Camera mode", "low_battery": 20,
@@ -100,11 +102,17 @@ Mapping file shape (abridged, placeholders):
     "actions": [{"name": "Porch light", "icon": "lantern", "color": "solar", "entity": "switch.<porch>"}],
     "rooms": [{"name": "Living Room", "icon": "sofa", "kind": "climate", "climate": "climate.<thermostat>"}],
     "yard": [{"name": "Front yard", "standby": "switch.<controller>_in_standby_mode", "zones": []}],
-    "calendars": [],
+    "calendars": [{"entity": "calendar.<name>", "name": "A"}],
     "saver": {"start": "02:00", "end": "06:00", "idle_seconds": 120}
   }
 }
 ```
+
+**Water** (optional, e.g. Flume): `flow`, `last_hour`, `today`, `week`, `month`, `last_24h`, `last_30d`, `leak`, `high_flow`,
+`low_battery` and `connectivity` (a list). The pop-up's hourly and 30-day charts come from HA's long-term statistics of `today`
+(or `statistic`, if set), so they fill in as HA records them. A leak or high-flow alert turns the header status red.
+
+**Calendars:** an event that appears on several listed calendars shows once, labelled with each calendar's `name`.
 
 **Room kinds:**
 
