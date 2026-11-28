@@ -108,6 +108,11 @@ def _ha_inventory(a):
     inventory.main(json_only=a.json, out=a.out)
 
 
+def _ha_floorplan(a):
+    from homeit.homeassistant import floorplan
+    floorplan.main()
+
+
 def _ha_deploy_panel(a):
     from homeit.homeassistant import panel
     panel.deploy(restart=a.restart, dry_run=a.dry_run)
@@ -158,6 +163,7 @@ def main(argv=None):
     dp.add_argument("--restart", action="store_true", help="restart HA if the YAML changed (about 6 minutes)")
     dp.add_argument("--dry-run", action="store_true", help="show what would change")
     dp.set_defaults(fn=_ha_deploy_panel)
+    ha.add_parser("floorplan", help="render the private house.json floor plan to floorplan.svg").set_defaults(fn=_ha_floorplan)
     inv = ha.add_parser("inventory", help="integrations, health, devices, re-auth needs")
     inv.add_argument("--json", action="store_true", help="print the raw snapshot")
     inv.add_argument("--out", help="also write the summary markdown to this path")

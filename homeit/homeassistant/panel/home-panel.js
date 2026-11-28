@@ -361,6 +361,60 @@ button{font:inherit;color:inherit}
 @keyframes rise{from{transform:translateY(16px);opacity:0}}
 @media (prefers-reduced-motion:reduce){.flow .dots,.saver .inner,.layer.anim,.layer.anim .sheet{animation:none}}
 
+/* House map in the thermostat sheet. The SVG comes from the panel config (classes prefixed fp-), so all of its colors live here. */
+.sheet.wide{width:min(1180px,95%);max-height:95%;padding:18px 22px 20px;gap:14px}
+.hv{display:grid;grid-template-columns:min(46%,calc((95dvh - 118px) * .673)) minmax(0,1fr);gap:24px;align-items:start}
+.hv-map{position:sticky;top:0;min-width:0}
+.hv-key{display:flex;flex-direction:column;gap:8px}
+.hv-key .seg button{min-height:36px;font-size:13.5px}
+.hv-side{display:flex;flex-direction:column;gap:18px;min-width:0}
+.fp-floorplan{display:block;width:100%;height:auto;max-height:calc(95dvh - 118px);font-family:var(--f-ui);
+  --fp-floor:color-mix(in srgb,var(--t) 5%,var(--sheet));--fp-wall:color-mix(in srgb,var(--t) 72%,var(--sheet));--fp-faint:color-mix(in srgb,var(--t) 20%,transparent)}
+.fp-floorplan *{pointer-events:none}
+.fp-floorplan .fp-room[data-act]{pointer-events:auto;cursor:pointer}
+.fp-room{fill:var(--fp-floor);transition:fill .6s}
+.fp-room.fp-closet,.fp-room.fp-hall,.fp-room.fp-garage{fill:color-mix(in srgb,var(--t) 10%,var(--sheet))}
+.fp-room.fp-outdoor{fill:color-mix(in srgb,var(--ok) 9%,var(--sheet))}
+.fp-ns-bg{fill:var(--fp-floor)}
+.fp-ns-ln{stroke:color-mix(in srgb,var(--t) 9%,transparent);stroke-width:.25}
+.fp-wall{fill:none;stroke:var(--fp-wall);stroke-width:.35}
+.fp-wall.fp-outdoor{stroke:color-mix(in srgb,var(--ok) 35%,var(--sheet));stroke-width:.12}
+.fp-ext{fill:none;stroke:var(--fp-wall);stroke-width:.6}
+.fp-gap{fill:var(--sheet)}
+.fp-door{fill:none;stroke:var(--fp-faint);stroke-width:.08}
+.fp-door .fp-open{stroke-dasharray:.35 .3}
+.fp-door .fp-porthole{stroke:var(--fp-wall);stroke-width:.06}
+.fp-window rect{fill:color-mix(in srgb,var(--home) 30%,var(--sheet));stroke:var(--fp-wall);stroke-width:.06}
+.fp-window line{stroke:var(--fp-wall);stroke-width:.05}
+.fp-window.fp-single rect{fill:color-mix(in srgb,var(--solar) 60%,var(--sheet))}
+.fp-furn *{fill:none;stroke:var(--fp-faint);stroke-width:.06}
+.fp-furn text{display:none}
+.fp-furn .fp-fireplace{fill:color-mix(in srgb,var(--heat) 22%,transparent)}
+.fp-vent{fill:var(--acc)}
+.fp-return{fill:var(--alert)}
+.fp-sensor{fill:var(--t);stroke:var(--sheet);stroke-width:.14}
+.fp-thermostat{fill:var(--sheet);stroke:var(--t);stroke-width:.22}
+.fp-annot text{fill:var(--d);font-size:.95px;font-weight:800;letter-spacing:.35px;text-anchor:middle;dominant-baseline:central}
+.fp-lbl{text-anchor:middle;dominant-baseline:central;fill:var(--t);paint-order:stroke;stroke:color-mix(in srgb,var(--sheet) 55%,transparent);stroke-width:.32;stroke-linejoin:round}
+.fp-lbl.n{font-weight:700}
+.fp-lbl.n.dim{fill:var(--d);font-size:1.15px}
+.fp-lbl.v{font-family:var(--f-num);font-weight:500;letter-spacing:-.04px}
+.fp-lbl.h{font-weight:700;fill:var(--d)}
+.fpleg{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;font-size:12px;font-weight:700;color:var(--d)}
+.fpleg .bar{height:10px;border-radius:999px;background:linear-gradient(90deg,color-mix(in srgb,var(--home) 70%,var(--sheet)),color-mix(in srgb,var(--t) 7%,var(--sheet)),color-mix(in srgb,var(--heat) 70%,var(--sheet)))}
+.fpleg .bar.hum{background:linear-gradient(90deg,color-mix(in srgb,var(--solar) 70%,var(--sheet)),color-mix(in srgb,var(--ok) 16%,var(--sheet)) 50%,color-mix(in srgb,var(--home) 70%,var(--sheet)))}
+.fpkey{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;font-weight:600;color:var(--d)}
+.fpkey i{display:inline-block;width:12px;height:5px;border-radius:2px;margin-right:6px;vertical-align:middle;background:var(--c)}
+.fpkey i.o{width:9px;height:9px;border-radius:50%;background:var(--sheet);box-shadow:inset 0 0 0 2px var(--t)}
+.fprows{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fprow{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:baseline;
+  padding:9px 12px;border-radius:16px;background:var(--tile);border:1px solid var(--tile-brd);min-width:0}
+.fprow .nm{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fprow .nm small{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--d);margin-left:4px}
+.fprow .v{font-size:17px}
+.fprow .h{font-size:12px;font-weight:600;color:var(--d)}
+.fprow .d{font-size:12px;font-weight:800;color:var(--c);text-align:right}
+
 @container scr (min-width: 701px) and (max-width: 1100px){
   .wrap{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
   .body,.col{gap:10px}
@@ -419,6 +473,15 @@ button{font:inherit;color:inherit}
   .sgrid,.kv{grid-template-columns:1fr 1fr}
   .sgrid.one{grid-template-columns:1fr}
   .saver .big{font-size:86px}
+  .sheet.wide{width:auto;max-height:none;padding:max(52px,env(safe-area-inset-top,0px)) 18px 30px;gap:18px}
+  .hv{grid-template-columns:1fr}
+  .hv-map{position:static}
+  .fp-floorplan{max-height:none}
+  .fprows{grid-template-columns:1fr 1fr}
+  .fprow .nm{grid-column:1/-1}
+  .fprow .v{grid-row:2;grid-column:1}
+  .fprow .d{grid-row:2;grid-column:2;align-self:center}
+  .fprow .h{grid-row:3;grid-column:1/-1}
 }`;
 
 class HomePanel extends HTMLElement {
@@ -697,7 +760,7 @@ class HomePanel extends HTMLElement {
         <div class="sm">${this.n(w.temp) !== null ? Math.round(this.n(w.temp)) + '° · ' : ''}${T.peak ? 'peak price ' + T.next : T.next.startsWith('until') ? 'off-peak ' + T.next : 'off-peak · ' + T.next}</div></div></div>`;
     } else if (this.ui.sheet) {
       const x = this.sheet(this.ui.sheet), fresh = this.ui.sheet !== this.ui.shown;
-      if (x) html = `<div class="layer ${fresh ? 'anim' : ''}" data-act="closebg"><div class="sheet" role="dialog" aria-label="${esc(x.t)}">
+      if (x) html = `<div class="layer ${fresh ? 'anim' : ''}" data-act="closebg"><div class="sheet ${x.wide ? 'wide' : ''}" role="dialog" aria-label="${esc(x.t)}">
         <div class="sh"><div><div class="ttl">${esc(x.t)}</div><div class="sts">${x.s}</div></div><button class="close" data-act="close" aria-label="Close">${ic('x')}</button></div>${x.b}</div></div>`;
       else this.ui.sheet = null;
     }
@@ -1172,7 +1235,8 @@ class HomePanel extends HTMLElement {
     const r = (this.cfg.rooms || [])[i]; if (!r) return null;
     const x = this.roomInfo(r);
     let b = '';
-    if (r.kind === 'climate') b = this.climateBody(r);
+    const map = r.kind === 'climate' && this.cfg.floorplan && this.cfg.floorplan.svg;
+    if (r.kind === 'climate') b = map ? this.houseMap(r, this.climateBody(r)) : this.climateBody(r);
     else if (r.kind === 'appliance') {
       const op = this.v(r.state), fin = this.t(r.finish), prog = this.v(r.program);
       const pretty = (p) => (p || '').replace(/^.*_program_/, '').replace(/_/g, ' ').replace(/\b(\d+)$/, '$1°').replace(/^\w/, (m) => m.toUpperCase());
@@ -1189,7 +1253,99 @@ class HomePanel extends HTMLElement {
       }).join('')}</div>`;
     } else if (r.kind === 'workshop') b = this.workshopBody();
     else if (r.kind === 'yard') b = this.yardBlock((this.cfg.yard || [])[r.yard ?? 0] || { name: r.name }, r.extra || []);
-    return { t: r.sheet_title || r.name, s: esc([x.v, x.s].filter(Boolean).join(' · ')), b };
+    return { t: r.sheet_title || (map ? 'Home climate' : r.name), s: esc([x.v, x.s].filter(Boolean).join(' · ')), b, wide: !!map };
+  }
+
+  // ---------- house map (config `floorplan`: built by `homeit ha deploy-panel` from the site's private house.json) ----------
+  // What each room is compared with: the setpoint while the Nest holds one, otherwise the Nest's own reading.
+  fpRef(climate) {
+    const c = this.s(climate); if (!c) return null;
+    const a = c.attributes;
+    if (a.preset_mode !== 'eco') {
+      if ((c.state === 'heat' || c.state === 'cool') && a.temperature != null) return { v: +a.temperature, l: `the ${a.temperature}° setpoint` };
+      if (c.state === 'heat_cool') {
+        const v = a.hvac_action === 'cooling' ? a.target_temp_high : a.target_temp_low;
+        if (v != null) return { v: +v, l: `the ${v}° ${a.hvac_action === 'cooling' ? 'cooling' : 'heating'} setpoint` };
+      }
+    }
+    return a.current_temperature != null ? { v: +a.current_temperature, l: `the Nest's ${a.current_temperature}°` } : null;
+  }
+  fpReadings(fp) {
+    const out = (fp.sensors || []).map((s) => ({ area: s.area, name: s.name, ent: s.temperature, hent: s.humidity,
+      t: this.ok(s.temperature) ? this.n(s.temperature) : null, h: this.ok(s.humidity) ? this.n(s.humidity) : null }));
+    const th = fp.thermostat;
+    if (th) {
+      const c = this.s(th.entity), a = c ? c.attributes : {};
+      const room = (fp.rooms || []).find((r) => r.area === th.area);
+      out.push({ area: th.area, name: room ? room.name : 'Thermostat', nest: true, ent: th.temperature || th.entity, hent: th.humidity || th.entity,
+        t: th.temperature && this.ok(th.temperature) ? this.n(th.temperature) : a.current_temperature ?? null,
+        h: th.humidity && this.ok(th.humidity) ? this.n(th.humidity) : a.current_humidity ?? null });
+    }
+    return out;
+  }
+  fpColor(mode, v, ref) {
+    if (v === null || v === undefined) return null;
+    if (mode === 'hum') {
+      const d = v - 45;
+      if (Math.abs(d) <= 5) return 'color-mix(in srgb,var(--ok) 16%,var(--sheet))';
+      const k = Math.min(1, (Math.abs(d) - 5) / 15);
+      return `color-mix(in srgb,var(${d > 0 ? '--home' : '--solar'}) ${Math.round(18 + 52 * k)}%,var(--sheet))`;
+    }
+    if (!ref) return null;
+    const d = v - ref.v;
+    if (Math.abs(d) < 0.3) return 'color-mix(in srgb,var(--t) 7%,var(--sheet))';
+    return `color-mix(in srgb,var(${d > 0 ? '--heat' : '--home'}) ${Math.round(14 + 56 * Math.min(1, Math.abs(d) / 4))}%,var(--sheet))`;
+  }
+  fpSvg(fp, mode, ref, R) {
+    const by = new Map(R.map((x) => [x.area, x]));
+    const css = [], lbl = [];
+    let svg = fp.svg;
+    const N = (v) => Math.round(v * 100) / 100;
+    for (const r of fp.rooms || []) {
+      const x = r.area ? by.get(r.area) : null, [cx, cy] = r.at;
+      if (r.rotate) { lbl.push(`<text class="fp-lbl n dim" x="${cx}" y="${cy}" transform="rotate(-90 ${cx} ${cy})">${esc(r.short)}</text>`); continue; }
+      if (!x) {
+        // a living space without a sensor gets a faint hatch, so it doesn't read as "right on target"
+        if (r.kind === 'room') css.push(`#room-${r.id}{fill:url(#fp-nosensor)}`);
+        lbl.push(`<text class="fp-lbl n dim" x="${cx}" y="${cy}">${esc(r.short)}</text>`); continue;
+      }
+      const col = this.fpColor(mode, mode === 'hum' ? x.h : x.t, ref);
+      if (col) css.push(`#room-${r.id}{fill:${col}}`);
+      const ent = mode === 'hum' ? x.hent : x.ent;
+      if (ent) svg = svg.replace(`id="room-${r.id}"`, `id="room-${r.id}" data-act="more:${esc(ent)}"`);
+      const k = r.w && r.w < 7 ? 0.8 : 1;
+      const t = x.t !== null ? x.t.toFixed(1) + '°' : '—', h = x.h !== null ? Math.round(x.h) + '%' : '';
+      const [big, small] = mode === 'hum' ? [h || '—', x.t !== null ? t : ''] : [t, h];
+      lbl.push(`<text class="fp-lbl n" x="${cx}" y="${N(cy - 1.6 * k)}" style="font-size:${N(1.25 * k)}px">${esc(r.short)}</text>`,
+        `<text class="fp-lbl v" x="${cx}" y="${N(cy + 0.2 * k)}" style="font-size:${N(2.1 * k)}px">${big}</text>`,
+        small ? `<text class="fp-lbl h" x="${cx}" y="${N(cy + 1.95 * k)}" style="font-size:${N(1.05 * k)}px">${small}</text>` : '');
+    }
+    const defs = '<defs><pattern id="fp-nosensor" width="1.2" height="1.2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+      + '<rect width="1.2" height="1.2" class="fp-ns-bg"/><line x1="0" y1="0" x2="0" y2="1.2" class="fp-ns-ln"/></pattern></defs>';
+    svg = svg.replace(/(<svg[^>]*>)/, `$1${defs}`);
+    return `<style>${css.join('')}</style>${svg.replace('</svg>', `<g class="fp-live">${lbl.join('')}</g></svg>`)}`;
+  }
+  houseMap(r, controls) {
+    const fp = this.cfg.floorplan, mode = this.ui.fpMode || 'temp';
+    const ref = this.fpRef(r.climate), R = this.fpReadings(fp);
+    const temps = R.filter((x) => x.t !== null);
+    const lo = temps.length ? temps.reduce((a, b) => (b.t < a.t ? b : a)) : null;
+    const hi = temps.length ? temps.reduce((a, b) => (b.t > a.t ? b : a)) : null;
+    const seg = `<div class="seg"><button type="button" aria-pressed="${mode === 'temp'}" data-act="fpmode:temp">Temperature</button><button type="button" aria-pressed="${mode === 'hum'}" data-act="fpmode:hum">Humidity</button></div>`;
+    const leg = mode === 'hum'
+      ? `<div class="fpleg"><span>Dry</span><span class="bar hum"></span><span>Humid</span></div><div class="sub">Green is 40–50% relative humidity.</div>`
+      : `<div class="fpleg"><span>4° cooler</span><span class="bar"></span><span>4° warmer</span></div>
+         <div class="sub">${ref ? `Compared with ${esc(ref.l)}` : 'The thermostat is unavailable'}${lo && hi && hi !== lo ? ` · ${(hi.t - lo.t).toFixed(1)}° spread, ${esc(lo.name)} coldest` : ''}.</div>`;
+    const key = `<div class="fpkey"><span><i style="--c:var(--acc)"></i>Supply vent</span><span><i style="--c:var(--alert)"></i>Return</span><span><i class="o"></i>Nest</span><span><i style="--c:var(--solar)"></i>Single-pane glass</span></div>`;
+    const rows = [...R].sort((a, b) => (a.t ?? 1e9) - (b.t ?? 1e9)).map((x) => {
+      const d = x.t !== null && ref ? x.t - ref.v : null;
+      const c = d === null || Math.abs(d) < 0.3 ? 'var(--d)' : d > 0 ? 'var(--heat)' : 'var(--home)';
+      const ds = d === null ? '' : Math.abs(d) < 0.05 ? '±0.0°' : `${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}°`;
+      return `<button class="fprow" style="--c:${c}" data-act="more:${esc(x.ent)}"><span class="nm">${esc(x.name)}${x.nest ? '<small>Nest</small>' : ''}</span>
+        <span class="v num">${x.t !== null ? x.t.toFixed(1) + '°' : '—'}</span><span class="h">${x.h !== null ? Math.round(x.h) + '% humidity' : ''}</span><span class="d">${ds}</span></button>`;
+    }).join('');
+    return `<div class="hv"><div class="hv-map">${this.fpSvg(fp, mode, ref, R)}</div>
+      <div class="hv-side"><div class="hv-key">${seg}${leg}${key}</div>${controls}<div class="sec"><div class="lbl">Rooms · coldest first · tap for history</div><div class="fprows">${rows}</div></div></div></div>`;
   }
   climateBody(r) {
     const c = this.s(r.climate); if (!c) return '<div class="sub">The thermostat is unavailable.</div>';
@@ -1297,6 +1453,8 @@ class HomePanel extends HTMLElement {
           if (id) this.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId: id }, bubbles: true, composed: true }));
           return;
         }
+        case 'more': this.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId: a.dataset.act.slice(5) }, bubbles: true, composed: true })); return;
+        case 'fpmode': this.ui.fpMode = v === 'hum' ? 'hum' : 'temp'; break;
         case 'cam': this.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId: a.dataset.act.slice(4) }, bubbles: true, composed: true })); return;
         case 'mode': {
           const sec = this.security(), svc = { disarmed: 'alarm_disarm', armed_home: 'alarm_arm_home', armed_away: 'alarm_arm_away', armed_night: 'alarm_arm_night' }[v];
