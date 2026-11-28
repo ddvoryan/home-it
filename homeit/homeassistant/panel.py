@@ -6,6 +6,8 @@ What goes where:
 - The site's panel config (entity ids, names) lives privately in ~/.home-it/homeassistant/home_panel.json
   and is written to <HA config>/home_panel.yaml (JSON is valid YAML), which configuration.yaml includes as
   `panel_custom: !include home_panel.yaml`. HA only sends it to logged-in users.
+- The house floor plan (optional, ~/.home-it/homeassistant/floorplan/house.json) is rendered by floorplan.py
+  and travels inside that same private config as `floorplan`, never as a file under /local.
 - Helper scripts the panel calls (Nest fan timer, laser session start/end) are generated from that config
   and saved through HA's script config API.
 
@@ -24,6 +26,7 @@ from datetime import datetime
 from pathlib import Path
 
 from homeit import config, synology
+from homeit.homeassistant import floorplan
 from homeit.homeassistant.client import HA
 from homeit.synology import ssh
 
@@ -133,6 +136,10 @@ def _wait_running(timeout_s: int = 600) -> None:
 def deploy(restart: bool = False, dry_run: bool = False) -> None:
     site = json.loads(site_config_path().read_text(encoding="utf-8"))
     panel_cfg = site["config"]
+    house = floorplan.load_site()
+    if house is not None:
+        panel_cfg = {**panel_cfg, "floorplan": floorplan.panel_config(house)}
+        print(f"- floor plan: {len(house['rooms'])} rooms, {len((house.get('hvac') or {}).get('sensors', []))} sensors")
     js = (PANEL_SRC / "home-panel.js").read_bytes()
     version = hashlib.sha256(js).hexdigest()[:12]
     loader = (PANEL_SRC / "loader.js").read_bytes()

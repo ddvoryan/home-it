@@ -114,6 +114,26 @@ Mapping file shape (abridged, placeholders):
 
 **Calendars:** an event that appears on several listed calendars shows once, labelled with each calendar's `name`.
 
+### House map (optional, `ha floorplan`)
+
+If `~/.home-it/homeassistant/floorplan/house.json` exists, the thermostat (the `climate` room) opens a
+**Home climate** sheet: a floor plan with each room colored by how far its sensor reads from the Nest
+setpoint (or from the Nest's own reading in Eco or Off), a temperature/humidity toggle, the
+thermostat controls, and a room list sorted coldest first. Tapping a room or a list row opens that
+sensor's history.
+
+- The geometry is private (it describes the house), so it stays in `~/.home-it/` and travels inside the
+  panel config as `floorplan`, never as a file under `/local`. A change to `house.json` is a mapping
+  change: deploy with `--restart`.
+- `homeit/homeassistant/floorplan.py` documents the format. Coordinates are in feet: origin at the
+  back-left outer corner, x to the right, y toward the front. Rooms use `rect` or `poly`, and their
+  `area` matches an HA area id. `hvac` lists the vents, returns, thermostat and sensors (with entity ids).
+- `homeit ha floorplan` writes a styled `floorplan.svg` next to `house.json`, for review and printing.
+
+```powershell
+.\.venv\Scripts\python.exe -m homeit ha floorplan
+```
+
 **Room kinds:**
 
 | Kind | What it shows and controls |
