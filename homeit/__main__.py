@@ -65,7 +65,7 @@ def _syn_alerts(a):
 
 def _syn_update_images(a):
     from homeit.synology import updates
-    updates.main(dry_run=a.dry_run, only=a.only, force_rollback=a.force_rollback)
+    updates.main(dry_run=a.dry_run, only=a.only, force_rollback=a.force_rollback, cleanup_only=a.cleanup_previous)
 
 
 def _syn_usb_sync(a):
@@ -143,6 +143,8 @@ def main(argv=None):
     up.add_argument("--dry-run", action="store_true", help="only list targets")
     up.add_argument("--only", nargs="+", metavar="NAME", help="limit to these containers")
     up.add_argument("--force-rollback", action="store_true", help=argparse.SUPPRESS)
+    up.add_argument("--cleanup-previous", action="store_true",
+                    help="only remove leftover homeit-prev rollback images, update nothing")
     up.set_defaults(fn=_syn_update_images)
     us = syn.add_parser("usb-sync", help="weekly: rebuild the single-version USB backup task's folder list from rules")
     us.add_argument("--dry-run", action="store_true", help="show what would change")

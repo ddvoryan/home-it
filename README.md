@@ -34,7 +34,9 @@ Reports and snapshots land in `~/.home-it/data/synology/` (`latest.md` is always
   stable id, so a disk going from 90.5% to 90.6% full doesn't re-alert.
 - `update-images` tags each running container's image `<repo>:homeit-prev`, runs one-shot Watchtower
   (config-preserving recreate), verifies health, **rolls back** failures (`--no-pull` recreate on the prev tag),
-  then prunes dangling images. `--dry-run` and `--only NAME` are available.
+  then removes the `homeit-prev` rollback tags, which deletes each replaced image (like Watchtower's
+  `--cleanup`, but only after the new image passed), and prunes dangling images. `--dry-run`, `--only NAME`
+  and `--cleanup-previous` (cleanup only) are available.
 - `usb-sync` (Sun 02:30, optional) rebuilds a single-version Hyper Backup task's folder list from
   `roots` / `exclude` / `protect` rules in site config. Those tasks can't use exclude rules, so new folders
   would otherwise never be backed up, and a renamed one fails the whole task.

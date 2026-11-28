@@ -16,8 +16,8 @@
 ## Action policy on the NAS (agreed with the owner)
 - Monitoring and inventory: always OK.
 - **Routine actions OK without asking, report afterwards**: restart an unhealthy or crashed container,
-  pull and recreate a container on an updated image (`update-images`, which includes pruning
-  *dangling* images left behind by previous updates).
+  pull and recreate a container on an updated image (`update-images`, which then deletes the replaced
+  image and its `homeit-prev` rollback tag, and prunes *dangling* images; owner's request 2026-11-28).
 - **Ask first**: DSM or package updates, changing DSM settings, storage, shares, users, Hyper Backup
   task edits, deleting containers, tagged images, volumes or data, and anything touching Plex (a separate project).
 - Scheduled runs: the hourly `check` and the Claude relay/digest tasks are **read-only**. Only two weekly

@@ -26,7 +26,7 @@ Tooling: this repo (`homeit.synology`). Run everything from the repo root in Pow
 ## Acting on findings
 Follow the action policy in the repo's `CLAUDE.md`:
 - OK without asking (report afterwards): restarting a crashed/unhealthy container, and image updates via
-  `update-images` (it tags `homeit-prev`, verifies health, and rolls back automatically). `--only <name>` targets one container.
+  `update-images` (it tags `homeit-prev`, verifies health, rolls back automatically, then deletes the replaced image). `--only <name>` targets one container.
 - Ask first: DSM/package updates, Hyper Backup task edits, scrub schedule, shares/users/settings, deleting anything, Plex.
 
 ## Recurring jobs (already set up; don't recreate)
