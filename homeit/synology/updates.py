@@ -9,8 +9,13 @@ Flow (all on the NAS, via SSH + sudo docker):
     no healthcheck) after a grace period.
  5. Failed -> re-tag homeit-prev back onto the original tag and run watchtower
     with --no-pull, which recreates the container on the previous image.
- 6. Prune dangling images (last week's rollback points). Record results and
-    queue a summary alert for the Claude relay to report.
+ 6. Remove every homeit-prev tag. For a container that was updated this deletes
+    the previous image, like watchtower --cleanup but only after the new image
+    passed verification. Then prune dangling images (e.g. a rolled-back new image).
+    Record results and queue a summary alert for the Claude relay to report.
+
+If the run crashes before step 6, the homeit-prev tags are kept so a manual
+rollback is still possible; the next run removes them.
 """
 from __future__ import annotations
 
@@ -137,7 +142,8 @@ def update_images(dry_run: bool = False, only: list[str] | None = None, force_ro
                 entry = {"name": n, "reason": status[n], "after_rollback": post.get(n, "missing")}
                 (result["rolled_back"] if post.get(n) == "ok" else result["failed"]).append(entry)
 
-        # 6. prune last week's rollback points (now dangling)
+        # 6. drop the rollback points (deletes previous images no longer in use), then prune
+        result["removed_previous"], result["kept_previous"] = _remove_prev_tags(nas)
         r = nas.run(f"{nas.D} image prune -f")
         result["prune"] = r.out.strip().splitlines()[-1:] if r.ok else r.err
     except Exception as e:  # noqa: BLE001
@@ -148,6 +154,28 @@ def update_images(dry_run: bool = False, only: list[str] | None = None, force_ro
         if not dry_run:
             _record(result)
     return result
+
+
+def _remove_prev_tags(nas: _NAS) -> tuple[list[str], list[str]]:
+    """Untag every <repo>:homeit-prev. Docker deletes the image too when that was its last tag
+    and no container uses it. Returns (removed refs, refs kept because Docker refused)."""
+    r = nas.run(f"{nas.D} images --format '{{{{.Repository}}}}:{{{{.Tag}}}}'")
+    refs = sorted({l for l in r.out.split() if l.endswith(":" + PREV_TAG)}) if r.ok else []
+    removed, kept = [], []
+    for ref in refs:
+        # no -f: an image still used by some container stays (only its tag would go with -f)
+        rr = nas.run(f"{nas.D} rmi {shlex.quote(ref)}")
+        (removed if rr.ok else kept).append(ref if rr.ok else f"{ref} ({rr.err.strip()[:120]})")
+    return removed, kept
+
+
+def cleanup_previous() -> dict:
+    """One-off: remove leftover rollback tags/images from runs before this cleanup existed."""
+    nas = _NAS()
+    removed, kept = _remove_prev_tags(nas)
+    r = nas.run(f"{nas.D} image prune -f")
+    return {"removed_previous": removed, "kept_previous": kept,
+            "prune": r.out.strip().splitlines()[-1:] if r.ok else r.err}
 
 
 def _cm_images() -> list[dict]:
@@ -166,6 +194,8 @@ def _record(res: dict) -> None:
         parts.append("ROLLED BACK (new image unhealthy): " + ", ".join(f"{x['name']} ({x['reason']})" for x in res["rolled_back"]))
     if res["failed"]:
         parts.append("FAILED, still unhealthy after rollback: " + ", ".join(f"{x['name']} ({x['after_rollback']})" for x in res["failed"]))
+    if res.get("kept_previous"):
+        parts.append("previous images kept (in use): " + ", ".join(res["kept_previous"]))
     if res["errors"]:
         parts.append("errors: " + "; ".join(res["errors"]))
     if not parts:
@@ -175,7 +205,10 @@ def _record(res: dict) -> None:
                       "message": "Weekly image update: " + " | ".join(parts), "key": "image_update"}])
 
 
-def main(dry_run: bool, only: list[str] | None, force_rollback: bool) -> None:
+def main(dry_run: bool, only: list[str] | None, force_rollback: bool, cleanup_only: bool = False) -> None:
+    if cleanup_only:
+        print(json.dumps(cleanup_previous(), indent=1))
+        return
     res = update_images(dry_run=dry_run, only=only, force_rollback=force_rollback)
     res.pop("watchtower_log", None) if not dry_run else None
     print(json.dumps({k: v for k, v in res.items() if k != "rollback_log"}, indent=1))
